@@ -1,0 +1,16 @@
+{
+  "name": "coach-dashboard-api",
+  "version": "1.0.0",
+  "description": "Wodify proxy backend for Coach Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
