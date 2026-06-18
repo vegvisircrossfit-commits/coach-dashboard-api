@@ -218,9 +218,9 @@
           e('div',{style:{fontSize:'21px',fontWeight:'700',color:'#F0EDE8',marginBottom:'18px'}},'Select a Class'),
           e('div',{style:{display:'flex',flexDirection:'column',gap:'9px'}},
             classes.map(function(cls){
+              var name = cls.name || cls.program_name || 'Class';
+              var count = (cls.reserved || 0) + (cls.signed_in || 0);
               var time = cls.start_time ? cls.start_time.slice(0,5) : '';
-              var name = cls.program_name || cls.name || 'Class';
-              var count = (cls.reserved || 0);
               return e('button',{key:cls.id,onClick:function(){onSelect(cls);},style:{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'14px',padding:'17px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',textAlign:'left',width:'100%'}},
                 e('div',null,
                   e('div',{style:{color:'#F0EDE8',fontSize:'15px',fontWeight:'600'}},name),
@@ -262,7 +262,7 @@
         setLoading(true);
         var today = todayStr();
         // Get today's classes
-        wFetch('/classes?start_date='+today+'&end_date='+today)
+        fetch('https://coach-dashboard-api.onrender.com/today-classes').then(function(r){if(!r.ok)throw new Error('');return r.json();})
           .then(function(d){
             var list = d.classes || [];
             // Filter out cancelled classes
@@ -372,7 +372,7 @@
               e('div',{style:{fontSize:'10px',color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em'}},
                 (selClass&&selClass.start_time?selClass.start_time.slice(0,5)+' · ':'')+new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})
               ),
-              e('div',{style:{fontSize:'16px',fontWeight:'700'}},selClass?(selClass.program_name||selClass.name):'Class Roster')
+              e('div',{style:{fontSize:'16px',fontWeight:'700'}},selClass?(selClass.name||selClass.program_name):'Class Roster')
             )
           ),
           e('div',{style:{display:'flex',alignItems:'center',gap:'7px',flexWrap:'wrap'}},
