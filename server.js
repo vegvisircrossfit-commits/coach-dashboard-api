@@ -18,28 +18,46 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// Special route: get today's classes filtered by date
+// Get today's classes — scans pages from newest until we find today's date
 app.get("/today-classes", async (req, res) => {
-  // Get today in Houston time (CT)
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }); // YYYY-MM-DD
-  console.log("Fetching classes for today:", today);
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  console.log("Finding classes for:", today);
   try {
-    // Fetch up to 1000 classes and filter by today's date client-side
-    // since Wodify's date filter doesn't work reliably
-    const response = await fetch(`${WODIFY_BASE}/classes?page_size=100`, {
-      headers: { "x-api-key": WODIFY_API_KEY, "Accept": "application/json" },
-    });
-    const data = await response.json();
-    const allClasses = data.classes || [];
-    // Filter to today only, not cancelled
-    const todayClasses = allClasses.filter(c => c.start_date === today && !c.is_cancelled);
-    res.json({ classes: todayClasses, date: today });
+    let found = [];
+    let page = 1;
+    let hasMore = true;
+    let pagesChecked = 0;
+
+    while (hasMore && pagesChecked < 15) {
+      const r = await fetch(`${WODIFY_BASE}/classes?sort=desc_start_date&page_size=100&page=${page}`, {
+        headers: { "x-api-key": WODIFY_API_KEY, "Accept": "application/json" },
+      });
+      const data = await r.json();
+      const classes = data.classes || [];
+      hasMore = data.pagination ? data.pagination.has_more : false;
+
+      const todays = classes.filter(c => c.start_date === today && !c.is_cancelled);
+      found = found.concat(todays);
+
+      // Stop if the last class on this page is before today
+      const oldest = classes[classes.length - 1];
+      if (oldest && oldest.start_date < today) break;
+
+      page++;
+      pagesChecked++;
+    }
+
+    // Sort by start_time ascending
+    found.sort((a, b) => a.start_time > b.start_time ? 1 : -1);
+    console.log(`Found ${found.length} classes for ${today}`);
+    res.json({ classes: found, date: today });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Proxy all other Wodify API requests
+// Proxy all Wodify API requests
 app.get("/wodify/*", async (req, res) => {
   const wodifyPath = req.params[0];
   const params = new URLSearchParams(req.query);
