@@ -18,39 +18,24 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// Get today's classes — scans pages from newest until we find today's date
+// Get classes near today by searching the class sign-ins endpoint
+// which only returns classes that have actual activity
 app.get("/today-classes", async (req, res) => {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
   console.log("Finding classes for:", today);
   try {
-    let found = [];
-    let page = 1;
-    let hasMore = true;
-    let pagesChecked = 0;
+    // Use the search endpoint to find classes by today's date
+    const r = await fetch(
+      `${WODIFY_BASE}/classes/search?q=${today}&page_size=50`,
+      { headers: { "x-api-key": WODIFY_API_KEY, "Accept": "application/json" } }
+    );
+    const data = await r.json();
+    const classes = (data.classes || [])
+      .filter(c => c.start_date === today && !c.is_cancelled)
+      .sort((a, b) => a.start_time > b.start_time ? 1 : -1);
 
-    while (hasMore && pagesChecked < 15) {
-      const r = await fetch(`${WODIFY_BASE}/classes?sort=desc_start_date&page_size=100&page=${page}`, {
-        headers: { "x-api-key": WODIFY_API_KEY, "Accept": "application/json" },
-      });
-      const data = await r.json();
-      const classes = data.classes || [];
-      hasMore = data.pagination ? data.pagination.has_more : false;
-
-      const todays = classes.filter(c => c.start_date === today && !c.is_cancelled);
-      found = found.concat(todays);
-
-      // Stop if the last class on this page is before today
-      const oldest = classes[classes.length - 1];
-      if (oldest && oldest.start_date < today) break;
-
-      page++;
-      pagesChecked++;
-    }
-
-    // Sort by start_time ascending
-    found.sort((a, b) => a.start_time > b.start_time ? 1 : -1);
-    console.log(`Found ${found.length} classes for ${today}`);
-    res.json({ classes: found, date: today });
+    console.log(`Found ${classes.length} classes for ${today}`);
+    res.json({ classes, date: today });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -68,7 +53,7 @@ app.get("/wodify/*", async (req, res) => {
       headers: { "x-api-key": WODIFY_API_KEY, "Accept": "application/json", "Content-Type": "application/json" },
     });
     const text = await response.text();
-    console.log("Status:", response.status, "Body:", text.slice(0, 200));
+    console.log("Status:", response.status, "Body:", text.slice(0, 300));
     try { res.status(response.status).json(JSON.parse(text)); }
     catch { res.status(response.status).send(text); }
   } catch (err) {
