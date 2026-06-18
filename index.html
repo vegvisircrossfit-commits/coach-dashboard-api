@@ -4,321 +4,401 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Coach Dashboard — Vegvisir CrossFit</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>
+    // Register legacy preset so Babel outputs ES5, not ESM
+    Babel.registerPreset('env-legacy', {
+      presets: [
+        [Babel.availablePresets['env'], { targets: { ie: 11 }, modules: 'umd' }],
+        [Babel.availablePresets['react']]
+      ]
+    });
+  </script>
 </head>
 <body style="margin:0;padding:0;background:#0D0E12">
   <div id="root"></div>
+  <script type="text/babel" data-presets="env-legacy">
 
-  <script>
-    // Load scripts in sequence, then boot app
-    function loadScript(src, cb) {
-      var s = document.createElement('script');
-      s.src = src;
-      s.onload = cb;
-      s.onerror = function() { alert('Failed to load: ' + src); };
-      document.head.appendChild(s);
-    }
+const { useState, useCallback } = React;
 
-    loadScript('https://unpkg.com/react@18/umd/react.development.js', function() {
-      loadScript('https://unpkg.com/react-dom@18/umd/react-dom.development.js', function() {
-        loadScript('https://unpkg.com/@babel/standalone/babel.min.js', function() {
-          // All libs loaded — now compile and run the app
-          var code = document.getElementById('app-source').innerHTML;
-          var compiled = Babel.transform(code, { presets: ['react'] }).code;
-          var script = document.createElement('script');
-          script.textContent = compiled;
-          document.body.appendChild(script);
-        });
-      });
-    });
-  </script>
+const PROXY_BASE = "https://coach-dashboard-api.onrender.com/wodify";
+const CHECK_IN_APPT_NAME = "Athlete Check-in";
+const CHECK_IN_WINDOW_DAYS = 90;
 
-  <script type="text/app-source" id="app-source">
-    const { useState, useCallback } = React;
+function wodifyFetch(path) {
+  return fetch(PROXY_BASE + path).then(function(r) {
+    if (!r.ok) throw new Error("API error " + r.status);
+    return r.json();
+  });
+}
 
-    // ─── Config ───────────────────────────────────────────────────────────────
-    const PROXY_BASE = "https://coach-dashboard-api.onrender.com/wodify";
-    const CHECK_IN_APPT_NAME = "Athlete Check-in";
-    const CHECK_IN_WINDOW_DAYS = 90;
+const MOCK_ATHLETES = [
+  { id:"1", name:"Sarah Chen", photo:null, color:"#E8643A", injury:"Left shoulder impingement", dos:["Use neutral grip on pulls","Sub ring rows for pull-ups","Keep overhead light (<50% 1RM)"], donts:["No kipping pull-ups","Avoid snatches or overhead squats","No muscle-ups"], lastNote:{date:"Jun 3",text:"Responded well to banded pull-aparts. Moved confidently at 35% on push press."}, lastCheckIn:new Date(Date.now()-95*86400000) },
+  { id:"2", name:"Marcus Webb", photo:null, color:"#3A7BD5", injury:"Knee — post ACL surgery (6 mo)", dos:["Box squats to parallel only","Sub bike for running","Prioritize controlled eccentrics"], donts:["No full depth squats yet","No jumping lunges or box jumps","Avoid pistols"], lastNote:{date:"Jun 5",text:"Great session. Hit 185# back squat to box — strongest he's looked post-surgery."}, lastCheckIn:new Date(Date.now()-30*86400000) },
+  { id:"3", name:"Priya Nair", photo:null, color:"#27AE8F", injury:"Lower back — disc herniation (L4-L5)", dos:["Brace core aggressively","Sub Romanian DLs for conventional","Frequent position checks"], donts:["No heavy deadlifts","Avoid bent-over rows","No GHD sit-ups"], lastNote:{date:"Jun 1",text:"Tightness during warm-up. Scaled deadlifts to 95# — form solid."}, lastCheckIn:null },
+  { id:"4", name:"Derek Osei", photo:null, color:"#9B59B6", injury:"Wrist — mild sprain (right)", dos:["Use wrist wraps for all loaded movements","Sub DB holds where possible","Communicate pain levels each class"], donts:["No front rack position","Avoid handstand push-ups","No clean and jerks"], lastNote:null, lastCheckIn:new Date(Date.now()-45*86400000) },
+  { id:"5", name:"Jess Fontaine", photo:null, color:"#E74C3C", injury:"None — new member (3 weeks)", dos:["Prioritize mechanics over intensity","Encourage questions","Scale volume by 20-30%"], donts:["No maximal lifts yet","Do not rush progressions","Avoid complex gymnastics"], lastNote:{date:"Jun 4",text:"Picking things up fast. Deadlift form already solid."}, lastCheckIn:new Date(Date.now()-10*86400000) },
+  { id:"6", name:"Tom Hartley", photo:null, color:"#F39C12", injury:"Rotator cuff — chronic tightness", dos:["Band pull-aparts every warm-up","Light external rotation work","Sub push press for jerk"], donts:["No behind-the-neck movements","Avoid high-volume overhead pressing","No snatch balance"], lastNote:{date:"Jun 2",text:"Shoulder felt good. Kept overhead at 60% — no complaints."}, lastCheckIn:new Date(Date.now()-100*86400000) },
+];
 
-    async function wodifyFetch(path) {
-      const res = await fetch(PROXY_BASE + path);
-      if (!res.ok) throw new Error("API error " + res.status);
-      return res.json();
-    }
+const MOCK_CLASSES = [
+  { id:"1", name:"CrossFit", time:"6:00 AM", enrolled:6 },
+  { id:"2", name:"CrossFit", time:"9:00 AM", enrolled:4 },
+  { id:"3", name:"Open Gym", time:"11:00 AM", enrolled:8 },
+];
 
-    // ─── Mock data ────────────────────────────────────────────────────────────
-    const MOCK_ATHLETES = [
-      { id: "1", name: "Sarah Chen", photo: null, color: "#E8643A", injury: "Left shoulder impingement", dos: ["Use neutral grip on pulls", "Sub ring rows for pull-ups", "Keep overhead movements light (<50% 1RM)"], donts: ["No kipping pull-ups", "Avoid snatches or overhead squats", "No muscle-ups"], lastNote: { date: "Jun 3", text: "Responded well to banded pull-aparts. Moved confidently at 35% on push press." }, lastCheckIn: new Date(Date.now() - 95 * 86400000) },
-      { id: "2", name: "Marcus Webb", photo: null, color: "#3A7BD5", injury: "Knee — post ACL surgery (6 mo)", dos: ["Box squats to parallel only", "Sub bike for running", "Prioritize controlled eccentrics"], donts: ["No full depth squats yet", "No jumping lunges or box jumps", "Avoid pistols"], lastNote: { date: "Jun 5", text: "Great session. Hit 185# back squat to box — strongest he's looked post-surgery." }, lastCheckIn: new Date(Date.now() - 30 * 86400000) },
-      { id: "3", name: "Priya Nair", photo: null, color: "#27AE8F", injury: "Lower back — disc herniation (L4-L5)", dos: ["Brace core aggressively", "Sub Romanian DLs for conventional", "Frequent position checks"], donts: ["No heavy deadlifts", "Avoid bent-over rows", "No GHD sit-ups"], lastNote: { date: "Jun 1", text: "Tightness during warm-up. Scaled deadlifts to 95# — form solid." }, lastCheckIn: null },
-      { id: "4", name: "Derek Osei", photo: null, color: "#9B59B6", injury: "Wrist — mild sprain (right)", dos: ["Use wrist wraps for all loaded movements", "Sub DB holds where possible", "Communicate pain levels each class"], donts: ["No front rack position", "Avoid handstand push-ups", "No clean & jerks"], lastNote: null, lastCheckIn: new Date(Date.now() - 45 * 86400000) },
-      { id: "5", name: "Jess Fontaine", photo: null, color: "#E74C3C", injury: "None — new member (3 weeks)", dos: ["Prioritize mechanics over intensity", "Encourage questions", "Scale volume by 20-30%"], donts: ["No maximal lifts yet", "Don't rush progressions", "Avoid complex gymnastics"], lastNote: { date: "Jun 4", text: "Picking things up fast. Deadlift form already solid." }, lastCheckIn: new Date(Date.now() - 10 * 86400000) },
-      { id: "6", name: "Tom Hartley", photo: null, color: "#F39C12", injury: "Rotator cuff — chronic tightness", dos: ["Band pull-aparts every warm-up", "Light external rotation work", "Sub push press for jerk"], donts: ["No behind-the-neck movements", "Avoid high-volume overhead pressing", "No snatch balance"], lastNote: { date: "Jun 2", text: "Shoulder felt good. Kept overhead at 60% — no complaints." }, lastCheckIn: new Date(Date.now() - 100 * 86400000) },
-    ];
+function needsCheckIn(d) {
+  if (!d) return true;
+  return (Date.now() - new Date(d).getTime()) / 86400000 > CHECK_IN_WINDOW_DAYS;
+}
+function daysAgo(d) {
+  if (!d) return null;
+  return Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+}
+function colorForName(n) {
+  var c = ["#E8643A","#3A7BD5","#27AE8F","#9B59B6","#E74C3C","#F39C12","#16A085","#2980B9"];
+  return c[Math.abs((n.charCodeAt(0)||0)+(n.charCodeAt(1)||0)) % c.length];
+}
 
-    const MOCK_CLASSES = [
-      { id: "1", name: "CrossFit", time: "6:00 AM", enrolled: 6 },
-      { id: "2", name: "CrossFit", time: "9:00 AM", enrolled: 4 },
-      { id: "3", name: "Open Gym", time: "11:00 AM", enrolled: 8 },
-    ];
+function AthleteAvatar(props) {
+  var athlete = props.athlete;
+  var size = props.size || 72;
+  var fontSize = props.fontSize || 22;
+  var imgError = useState(false);
+  var setImgError = imgError[1];
+  imgError = imgError[0];
+  var initials = athlete.name.split(" ").map(function(n){return n[0];}).join("").slice(0,2);
+  if (athlete.photo && !imgError) {
+    return (
+      <div style={{width:size,height:size,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:"2px solid "+athlete.color+"44",boxShadow:"0 0 0 4px "+athlete.color+"18"}}>
+        <img src={athlete.photo} alt={athlete.name} onError={function(){setImgError(true);}} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+      </div>
+    );
+  }
+  return (
+    <div style={{width:size,height:size,borderRadius:"50%",background:"linear-gradient(135deg,"+athlete.color+"cc,"+athlete.color+"66)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:fontSize,fontWeight:"700",color:"#fff",fontFamily:"monospace",border:"2px solid "+athlete.color+"44",boxShadow:"0 0 0 4px "+athlete.color+"18",flexShrink:0}}>
+      {initials}
+    </div>
+  );
+}
 
-    function needsCheckIn(d) { if (!d) return true; return (Date.now() - new Date(d).getTime()) / 86400000 > CHECK_IN_WINDOW_DAYS; }
-    function daysAgo(d) { if (!d) return null; return Math.floor((Date.now() - new Date(d).getTime()) / 86400000); }
-    function colorForName(n) { const c = ["#E8643A","#3A7BD5","#27AE8F","#9B59B6","#E74C3C","#F39C12","#16A085","#2980B9"]; return c[Math.abs((n.charCodeAt(0)||0)+(n.charCodeAt(1)||0))%c.length]; }
+function AthleteCard(props) {
+  var athlete = props.athlete;
+  var onClick = props.onClick;
+  var flagged = needsCheckIn(athlete.lastCheckIn);
+  return (
+    <button onClick={function(){onClick(athlete);}} style={{background:"rgba(255,255,255,0.04)",border:flagged?"1px solid rgba(251,191,36,0.35)":"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"22px 16px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:"12px",position:"relative",overflow:"hidden",textAlign:"center",width:"100%"}}>
+      <div style={{position:"absolute",top:"-20px",right:"-20px",width:"80px",height:"80px",borderRadius:"50%",background:flagged?"#FBBF24":athlete.color,opacity:0.1,filter:"blur(20px)",pointerEvents:"none"}} />
+      {flagged && <div style={{position:"absolute",top:"10px",right:"10px",background:"#FBBF24",color:"#000",fontSize:"9px",fontWeight:"800",borderRadius:"6px",padding:"3px 7px",fontFamily:"monospace"}}>CHECK-IN</div>}
+      <div style={{position:"relative"}}>
+        <AthleteAvatar athlete={athlete} size={68} fontSize={20} />
+        {flagged && <div style={{position:"absolute",bottom:-2,right:-2,width:"18px",height:"18px",borderRadius:"50%",background:"#FBBF24",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"10px",border:"2px solid #0D0E12"}}>!</div>}
+      </div>
+      <div>
+        <div style={{color:"#F0EDE8",fontSize:"13px",fontWeight:"600",lineHeight:1.3}}>{athlete.name}</div>
+        <div style={{marginTop:"5px",fontSize:"10px",color:athlete.color,background:athlete.color+"18",borderRadius:"20px",padding:"2px 8px",display:"inline-block",lineHeight:1.5}}>{athlete.injury.split("—")[0].trim()}</div>
+      </div>
+      <div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)"}}>tap to view</div>
+    </button>
+  );
+}
 
-    function AthleteAvatar({ athlete, size, fontSize }) {
-      size = size || 72; fontSize = fontSize || 22;
-      const [imgError, setImgError] = useState(false);
-      const initials = athlete.name.split(" ").map(function(n){return n[0];}).join("").slice(0,2);
-      if (athlete.photo && !imgError) {
-        return <div style={{width:size,height:size,borderRadius:"50%",overflow:"hidden",flexShrink:0,border:"2px solid "+athlete.color+"44",boxShadow:"0 0 0 4px "+athlete.color+"18"}}><img src={athlete.photo} alt={athlete.name} onError={function(){setImgError(true);}} style={{width:"100%",height:"100%",objectFit:"cover"}} /></div>;
-      }
-      return <div style={{width:size,height:size,borderRadius:"50%",background:"linear-gradient(135deg, "+athlete.color+"cc, "+athlete.color+"66)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:fontSize,fontWeight:"700",color:"#fff",fontFamily:"'DM Mono',monospace",border:"2px solid "+athlete.color+"44",boxShadow:"0 0 0 4px "+athlete.color+"18",flexShrink:0}}>{initials}</div>;
-    }
+function AthleteModal(props) {
+  var athlete = props.athlete;
+  var onClose = props.onClose;
+  var onSaveNote = props.onSaveNote;
+  var noteState = useState("");
+  var newNote = noteState[0];
+  var setNewNote = noteState[1];
+  var savedState = useState(false);
+  var saved = savedState[0];
+  var setSaved = savedState[1];
+  var flagged = needsCheckIn(athlete.lastCheckIn);
+  var daysSince = daysAgo(athlete.lastCheckIn);
 
-    function AthleteCard({ athlete, onClick }) {
-      const flagged = needsCheckIn(athlete.lastCheckIn);
-      return (
-        <button onClick={function(){onClick(athlete);}} style={{background:"rgba(255,255,255,0.04)",border:flagged?"1px solid rgba(251,191,36,0.35)":"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"22px 16px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:"12px",transition:"all 0.2s ease",position:"relative",overflow:"hidden",textAlign:"center",width:"100%"}}>
-          <div style={{position:"absolute",top:"-20px",right:"-20px",width:"80px",height:"80px",borderRadius:"50%",background:flagged?"#FBBF24":athlete.color,opacity:0.1,filter:"blur(20px)",pointerEvents:"none"}} />
-          {flagged && <div style={{position:"absolute",top:"10px",right:"10px",background:"#FBBF24",color:"#000",fontSize:"9px",fontWeight:"800",borderRadius:"6px",padding:"3px 7px",fontFamily:"'DM Mono',monospace"}}>CHECK-IN</div>}
-          <div style={{position:"relative"}}>
-            <AthleteAvatar athlete={athlete} size={68} fontSize={20} />
-            {flagged && <div style={{position:"absolute",bottom:-2,right:-2,width:"18px",height:"18px",borderRadius:"50%",background:"#FBBF24",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"10px",border:"2px solid #0D0E12"}}>⚠</div>}
-          </div>
-          <div>
-            <div style={{color:"#F0EDE8",fontSize:"13px",fontWeight:"600",fontFamily:"'DM Sans',sans-serif",lineHeight:1.3}}>{athlete.name}</div>
-            <div style={{marginTop:"5px",fontSize:"10px",color:athlete.color,fontFamily:"'DM Mono',monospace",background:athlete.color+"18",borderRadius:"20px",padding:"2px 8px",display:"inline-block",lineHeight:1.5}}>{athlete.injury.split("—")[0].trim()}</div>
-          </div>
-          <div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",fontFamily:"'DM Mono',monospace"}}>tap to view →</div>
-        </button>
-      );
-    }
+  function handleSave() {
+    if (!newNote.trim()) return;
+    onSaveNote(athlete.id, newNote.trim());
+    setNewNote("");
+    setSaved(true);
+    setTimeout(function(){setSaved(false);}, 2500);
+  }
 
-    function AthleteModal({ athlete, onClose, onSaveNote }) {
-      const [newNote, setNewNote] = useState("");
-      const [saved, setSaved] = useState(false);
-      const flagged = needsCheckIn(athlete.lastCheckIn);
-      const daysSince = daysAgo(athlete.lastCheckIn);
-      function handleSave() {
-        if (!newNote.trim()) return;
-        onSaveNote(athlete.id, newNote.trim());
-        setNewNote("");
-        setSaved(true);
-        setTimeout(function(){setSaved(false);}, 2500);
-      }
-      return (
-        <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.78)",backdropFilter:"blur(10px)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-          <div onClick={function(e){e.stopPropagation();}} style={{background:"#14151A",borderRadius:"28px",border:flagged?"1px solid rgba(251,191,36,0.3)":"1px solid "+athlete.color+"33",boxShadow:"0 40px 80px rgba(0,0,0,0.6)",width:"100%",maxWidth:"500px",maxHeight:"90vh",overflowY:"auto"}}>
-            <div style={{padding:"24px 24px 20px",background:flagged?"linear-gradient(180deg,rgba(251,191,36,0.08) 0%,transparent 100%)":"linear-gradient(180deg,"+athlete.color+"10 0%,transparent 100%)",borderRadius:"28px 28px 0 0"}}>
-              {flagged && (
-                <div style={{background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:"12px",padding:"10px 14px",marginBottom:"18px",display:"flex",alignItems:"center",gap:"10px"}}>
-                  <span style={{fontSize:"16px"}}>⚠️</span>
-                  <div>
-                    <div style={{color:"#FBBF24",fontSize:"12px",fontWeight:"700",fontFamily:"'DM Sans',sans-serif"}}>Athlete Check-in Overdue</div>
-                    <div style={{color:"rgba(251,191,36,0.7)",fontSize:"11px",fontFamily:"'DM Mono',monospace",marginTop:"2px"}}>{athlete.lastCheckIn ? "Last check-in was "+daysSince+" days ago — over the 90-day window" : "No Athlete Check-in appointment on record"}</div>
-                  </div>
-                </div>
-              )}
-              <div style={{display:"flex",alignItems:"center",gap:"16px"}}>
-                <AthleteAvatar athlete={athlete} size={60} fontSize={18} />
-                <div style={{flex:1}}>
-                  <div style={{color:"#F0EDE8",fontSize:"19px",fontWeight:"700",fontFamily:"'DM Sans',sans-serif"}}>{athlete.name}</div>
-                  <div style={{color:athlete.color,fontSize:"11px",fontFamily:"'DM Mono',monospace",marginTop:"3px"}}>{athlete.injury}</div>
-                </div>
-                <button onClick={onClose} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:"50%",width:"34px",height:"34px",color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:"18px",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
-              </div>
-            </div>
-            <div style={{padding:"0 24px 28px",display:"flex",flexDirection:"column",gap:"20px"}}>
+  return (
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.82)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      <div onClick={function(e){e.stopPropagation();}} style={{background:"#14151A",borderRadius:"24px",border:flagged?"1px solid rgba(251,191,36,0.3)":"1px solid "+athlete.color+"33",boxShadow:"0 40px 80px rgba(0,0,0,0.6)",width:"100%",maxWidth:"500px",maxHeight:"90vh",overflowY:"auto"}}>
+
+        <div style={{padding:"22px 22px 18px",background:flagged?"linear-gradient(180deg,rgba(251,191,36,0.08) 0%,transparent 100%)":"linear-gradient(180deg,"+athlete.color+"10 0%,transparent 100%)",borderRadius:"24px 24px 0 0"}}>
+          {flagged && (
+            <div style={{background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:"12px",padding:"10px 14px",marginBottom:"16px",display:"flex",alignItems:"center",gap:"10px"}}>
+              <span style={{fontSize:"16px"}}>⚠️</span>
               <div>
-                <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}><span>✅</span><span style={{color:"#22C55E",fontFamily:"'DM Sans',sans-serif",fontWeight:"700",fontSize:"11px",letterSpacing:"0.1em",textTransform:"uppercase"}}>Do's</span></div>
-                <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
-                  {athlete.dos.length ? athlete.dos.map(function(d,i){return <div key={i} style={{background:"#22C55E0C",border:"1px solid #22C55E1E",borderRadius:"10px",padding:"10px 14px",color:"#D4FAE0",fontSize:"13px",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5,display:"flex",gap:"10px"}}><span style={{color:"#22C55E",flexShrink:0}}>→</span>{d}</div>;}) : <div style={{color:"rgba(255,255,255,0.25)",fontSize:"13px",fontFamily:"'DM Mono',monospace",padding:"10px 0"}}>None on file</div>}
+                <div style={{color:"#FBBF24",fontSize:"12px",fontWeight:"700"}}>Athlete Check-in Overdue</div>
+                <div style={{color:"rgba(251,191,36,0.7)",fontSize:"11px",marginTop:"2px",fontFamily:"monospace"}}>
+                  {athlete.lastCheckIn ? "Last check-in was "+daysSince+" days ago" : "No Athlete Check-in on record"}
                 </div>
               </div>
-              <div>
-                <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}><span>🚫</span><span style={{color:"#EF4444",fontFamily:"'DM Sans',sans-serif",fontWeight:"700",fontSize:"11px",letterSpacing:"0.1em",textTransform:"uppercase"}}>Don'ts</span></div>
-                <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
-                  {athlete.donts.length ? athlete.donts.map(function(d,i){return <div key={i} style={{background:"#EF44440C",border:"1px solid #EF44441E",borderRadius:"10px",padding:"10px 14px",color:"#FED7D7",fontSize:"13px",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5,display:"flex",gap:"10px"}}><span style={{color:"#EF4444",flexShrink:0}}>✕</span>{d}</div>;}) : <div style={{color:"rgba(255,255,255,0.25)",fontSize:"13px",fontFamily:"'DM Mono',monospace",padding:"10px 0"}}>None on file</div>}
-                </div>
-              </div>
-              <div style={{height:"1px",background:"rgba(255,255,255,0.06)"}} />
-              <div>
-                <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}><span>📋</span><span style={{color:"rgba(255,255,255,0.5)",fontFamily:"'DM Sans',sans-serif",fontWeight:"700",fontSize:"11px",letterSpacing:"0.1em",textTransform:"uppercase"}}>Last Note</span></div>
-                {athlete.lastNote ? (
-                  <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"14px 16px"}}>
-                    <div style={{color:athlete.color,fontSize:"10px",fontFamily:"'DM Mono',monospace",marginBottom:"6px"}}>{athlete.lastNote.date}</div>
-                    <div style={{color:"rgba(255,255,255,0.8)",fontSize:"13px",fontFamily:"'DM Sans',sans-serif",lineHeight:1.6}}>{athlete.lastNote.text}</div>
-                  </div>
-                ) : <div style={{padding:"14px 16px",color:"rgba(255,255,255,0.25)",fontSize:"13px",fontFamily:"'DM Mono',monospace",background:"rgba(255,255,255,0.02)",borderRadius:"12px",border:"1px dashed rgba(255,255,255,0.07)"}}>No notes yet.</div>}
-              </div>
-              <div style={{background:athlete.color+"0A",border:"1px solid "+athlete.color+"25",borderRadius:"16px",padding:"16px"}}>
-                <div style={{color:athlete.color,fontSize:"11px",fontFamily:"'DM Mono',monospace",fontWeight:"600",marginBottom:"10px",textTransform:"uppercase",letterSpacing:"0.08em"}}>+ Post-Class Note</div>
-                <textarea value={newNote} onChange={function(e){setNewNote(e.target.value);}} placeholder="How did they move today? Any pain, wins, or modifications needed next time..." rows={3} style={{width:"100%",background:"rgba(0,0,0,0.35)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:"10px",padding:"11px 13px",color:"#F0EDE8",fontSize:"13px",fontFamily:"'DM Sans',sans-serif",resize:"vertical",outline:"none",lineHeight:1.6,boxSizing:"border-box"}} />
-                <button onClick={handleSave} style={{marginTop:"10px",background:saved?"#22C55E":athlete.color,border:"none",borderRadius:"10px",padding:"11px 20px",color:"#fff",fontSize:"13px",fontWeight:"700",fontFamily:"'DM Sans',sans-serif",cursor:"pointer",width:"100%"}}>{saved ? "✓ Note Saved" : "Save Note"}</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    function SetupScreen({ onConnect }) {
-      const [loading, setLoading] = useState(false);
-      const [error, setError] = useState("");
-      function handleConnect() {
-        setLoading(true); setError("");
-        fetch("https://coach-dashboard-api.onrender.com/")
-          .then(function(r){ if(!r.ok) throw new Error("Status "+r.status); onConnect(true); })
-          .catch(function(){ setError("Could not reach the server — it may still be waking up. Wait 30 seconds and try again."); })
-          .finally(function(){ setLoading(false); });
-      }
-      return (
-        <div style={{minHeight:"100vh",background:"#0D0E12",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px",fontFamily:"'DM Sans',sans-serif"}}>
-          <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"24px",padding:"36px",width:"100%",maxWidth:"380px",textAlign:"center"}}>
-            <div style={{width:"64px",height:"64px",borderRadius:"18px",background:"linear-gradient(135deg,#3A7BD5,#27AE8F)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",margin:"0 auto 24px"}}>🏋️</div>
-            <div style={{fontSize:"11px",color:"rgba(255,255,255,0.35)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:"6px"}}>Vegvisir CrossFit</div>
-            <div style={{fontSize:"22px",fontWeight:"700",color:"#F0EDE8",marginBottom:"10px"}}>Coach Dashboard</div>
-            <div style={{fontSize:"13px",color:"rgba(255,255,255,0.4)",lineHeight:1.6,marginBottom:"28px"}}>Tap below to connect to Wodify and load today's class roster.</div>
-            {error && <div style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.25)",borderRadius:"10px",padding:"12px 14px",marginBottom:"16px",color:"#FCA5A5",fontSize:"12px",fontFamily:"'DM Mono',monospace",textAlign:"left",lineHeight:1.6}}>{error}</div>}
-            <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
-              <button onClick={handleConnect} disabled={loading} style={{background:"linear-gradient(135deg,#3A7BD5,#2563EB)",border:"none",borderRadius:"12px",padding:"14px",color:"#fff",fontSize:"15px",fontWeight:"700",cursor:loading?"wait":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:loading?0.7:1,boxShadow:"0 4px 20px rgba(58,123,213,0.4)"}}>{loading ? "Connecting..." : "Connect to Wodify"}</button>
-              <button onClick={function(){onConnect(false);}} style={{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",padding:"13px",color:"rgba(255,255,255,0.4)",fontSize:"13px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Use demo data</button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    function ClassSelector({ classes, onSelect }) {
-      return (
-        <div style={{minHeight:"100vh",background:"#0D0E12",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px",fontFamily:"'DM Sans',sans-serif"}}>
-          <div style={{width:"100%",maxWidth:"480px"}}>
-            <div style={{marginBottom:"28px"}}>
-              <div style={{fontSize:"11px",color:"rgba(255,255,255,0.35)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:"8px"}}>Today's Schedule</div>
-              <div style={{fontSize:"22px",fontWeight:"700",color:"#F0EDE8"}}>Select a Class</div>
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
-              {classes.map(function(cls){return (
-                <button key={cls.id} onClick={function(){onSelect(cls);}} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"16px",padding:"18px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",textAlign:"left",width:"100%"}}>
-                  <div>
-                    <div style={{color:"#F0EDE8",fontSize:"15px",fontWeight:"600",fontFamily:"'DM Sans',sans-serif"}}>{cls.name}</div>
-                    <div style={{color:"rgba(255,255,255,0.4)",fontSize:"12px",fontFamily:"'DM Mono',monospace",marginTop:"3px"}}>{cls.time} · {cls.enrolled} athletes</div>
-                  </div>
-                  <span style={{color:"rgba(255,255,255,0.3)",fontSize:"18px"}}>→</span>
-                </button>
-              );})}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    function CoachDashboard() {
-      const [screen, setScreen] = useState("setup");
-      const [isLive, setIsLive] = useState(false);
-      const [classes, setClasses] = useState([]);
-      const [selectedClass, setSelectedClass] = useState(null);
-      const [athletes, setAthletes] = useState([]);
-      const [loading, setLoading] = useState(false);
-      const [selected, setSelected] = useState(null);
-      const [search, setSearch] = useState("");
-      const [filterFlagged, setFilterFlagged] = useState(false);
-
-      function loadClasses(live) {
-        if (!live) { setClasses(MOCK_CLASSES); setScreen("classes"); return; }
-        setLoading(true);
-        var today = new Date().toISOString().split("T")[0];
-        wodifyFetch("/programclasses?date="+today)
-          .then(function(data){
-            var mapped = (data.Results||data.results||[]).map(function(c){return {id:c.Id||c.id,name:c.ProgramName||c.name,time:c.StartTime||c.time,enrolled:c.EnrolledCount||0};});
-            setClasses(mapped.length ? mapped : MOCK_CLASSES);
-          })
-          .catch(function(){ setClasses(MOCK_CLASSES); })
-          .finally(function(){ setLoading(false); setScreen("classes"); });
-      }
-
-      function loadAthletes(cls) {
-        setSelectedClass(cls); setLoading(true);
-        if (!isLive) { setAthletes(MOCK_ATHLETES); setScreen("roster"); setLoading(false); return; }
-        wodifyFetch("/programclassreservations?class_id="+cls.id)
-          .then(function(resData){
-            var reservations = resData.Results||resData.results||[];
-            return Promise.all(reservations.map(function(r){
-              var memberId = r.UserId||r.user_id||r.MemberId;
-              var name = r.UserName||r.name||r.MemberName||"Unknown";
-              var photo = r.UserPhotoUrl||r.photo_url||null;
-              var p1 = wodifyFetch("/appointments?member_id="+memberId+"&appointment_type="+encodeURIComponent(CHECK_IN_APPT_NAME)+"&status=completed&sort=date_desc&limit=1").then(function(d){var a=d.Results||d.results||[];return a.length?new Date(a[0].Date||a[0].date):null;}).catch(function(){return null;});
-              var p2 = wodifyFetch("/members/"+memberId).then(function(p){return {injury:p.Notes||p.MedicalNotes||p.notes||"No notes on file",dos:(p.CustomFields&&p.CustomFields.Dos)?p.CustomFields.Dos.split("\n").filter(Boolean):[],donts:(p.CustomFields&&p.CustomFields.Donts)?p.CustomFields.Donts.split("\n").filter(Boolean):[],lastNote:(p.CustomFields&&p.CustomFields.CoachNote)?{date:p.CustomFields.CoachNoteDate||"—",text:p.CustomFields.CoachNote}:null};}).catch(function(){return {injury:"No notes on file",dos:[],donts:[],lastNote:null};});
-              return Promise.all([p1,p2]).then(function(results){return {id:memberId,name:name,photo:photo,color:colorForName(name),injury:results[1].injury,dos:results[1].dos,donts:results[1].donts,lastNote:results[1].lastNote,lastCheckIn:results[0]};});
-            }));
-          })
-          .then(function(list){ setAthletes(list); })
-          .catch(function(){ setAthletes(MOCK_ATHLETES); })
-          .finally(function(){ setLoading(false); setScreen("roster"); });
-      }
-
-      function handleConnect(live) { setIsLive(live); loadClasses(live); }
-
-      function handleSaveNote(id, text) {
-        var today = new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"});
-        var newNote = {date:today,text:text};
-        setAthletes(function(prev){return prev.map(function(a){return a.id===id?Object.assign({},a,{lastNote:newNote}):a;});});
-        setSelected(function(prev){return prev&&prev.id===id?Object.assign({},prev,{lastNote:newNote}):prev;});
-      }
-
-      var filtered = athletes.filter(function(a){return a.name.toLowerCase().includes(search.toLowerCase());}).filter(function(a){return filterFlagged?needsCheckIn(a.lastCheckIn):true;});
-      var flaggedCount = athletes.filter(function(a){return needsCheckIn(a.lastCheckIn);}).length;
-
-      if (screen==="setup") return <SetupScreen onConnect={handleConnect} />;
-      if (screen==="classes") return loading
-        ? <div style={{minHeight:"100vh",background:"#0D0E12",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',monospace"}}>Loading classes...</div>
-        : <ClassSelector classes={classes} onSelect={loadAthletes} />;
-
-      return (
-        <div style={{minHeight:"100vh",background:"#0D0E12",color:"#F0EDE8",fontFamily:"'DM Sans',sans-serif"}}>
-          <style>{"\
-            @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600;700&display=swap');\
-            *{box-sizing:border-box;margin:0;padding:0;}\
-            ::-webkit-scrollbar{width:5px;}\
-            ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px;}\
-            textarea::placeholder{color:rgba(255,255,255,0.2);}\
-            input::placeholder{color:rgba(255,255,255,0.2);}\
-          "}</style>
-          <div style={{borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"12px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:"14px"}}>
-              <button onClick={function(){setScreen("classes");}} style={{background:"rgba(255,255,255,0.06)",border:"none",borderRadius:"8px",padding:"7px 12px",color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:"12px",fontFamily:"'DM Mono',monospace"}}>← Classes</button>
-              <div>
-                <div style={{fontSize:"11px",color:"rgba(255,255,255,0.35)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase"}}>{selectedClass&&selectedClass.time?selectedClass.time+" · ":""}{new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}</div>
-                <div style={{fontSize:"18px",fontWeight:"700"}}>{selectedClass?selectedClass.name:"Class Roster"}</div>
-              </div>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
-              {flaggedCount>0 && <button onClick={function(){setFilterFlagged(function(f){return !f;});}} style={{background:filterFlagged?"#FBBF24":"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:"20px",padding:"7px 14px",color:filterFlagged?"#000":"#FBBF24",fontSize:"12px",fontWeight:"700",fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>⚠ {flaggedCount} overdue</button>}
-              <div style={{background:"rgba(255,255,255,0.06)",borderRadius:"20px",padding:"7px 14px",fontSize:"12px",fontFamily:"'DM Mono',monospace",color:"rgba(255,255,255,0.6)"}}>{athletes.length} athletes</div>
-              <div style={{display:"flex",alignItems:"center",gap:"6px",background:isLive?"rgba(34,197,94,0.1)":"rgba(255,255,255,0.05)",border:"1px solid "+(isLive?"rgba(34,197,94,0.25)":"rgba(255,255,255,0.1)"),borderRadius:"20px",padding:"7px 12px",fontSize:"11px",fontFamily:"'DM Mono',monospace",color:isLive?"#22C55E":"rgba(255,255,255,0.35)"}}>
-                <span style={{width:"5px",height:"5px",borderRadius:"50%",background:isLive?"#22C55E":"#555",display:"inline-block"}} />
-                {isLive?"Wodify live":"Demo mode"}
-              </div>
-            </div>
-          </div>
-          <div style={{padding:"18px 24px 0"}}>
-            <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Search athletes..." style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",padding:"10px 16px",width:"100%",maxWidth:"320px",color:"#F0EDE8",fontSize:"13px",fontFamily:"'DM Sans',sans-serif",outline:"none"}} />
-          </div>
-          {loading ? (
-            <div style={{padding:"60px",textAlign:"center",color:"rgba(255,255,255,0.3)",fontFamily:"'DM Mono',monospace"}}>Loading athletes...</div>
-          ) : (
-            <div style={{padding:"20px 24px 40px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(148px,1fr))",gap:"14px"}}>
-              {filtered.map(function(a){return <AthleteCard key={a.id} athlete={a} onClick={setSelected} />;} )}
-              {filtered.length===0 && <div style={{gridColumn:"1/-1",textAlign:"center",padding:"48px",color:"rgba(255,255,255,0.25)",fontFamily:"'DM Mono',monospace"}}>No athletes match your filter.</div>}
             </div>
           )}
-          {selected && <AthleteModal athlete={selected} onClose={function(){setSelected(null);}} onSaveNote={handleSaveNote} />}
+          <div style={{display:"flex",alignItems:"center",gap:"14px"}}>
+            <AthleteAvatar athlete={athlete} size={56} fontSize={17} />
+            <div style={{flex:1}}>
+              <div style={{color:"#F0EDE8",fontSize:"18px",fontWeight:"700"}}>{athlete.name}</div>
+              <div style={{color:athlete.color,fontSize:"11px",marginTop:"3px",fontFamily:"monospace"}}>{athlete.injury}</div>
+            </div>
+            <button onClick={onClose} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:"50%",width:"32px",height:"32px",color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:"18px",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>x</button>
+          </div>
         </div>
-      );
-    }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<CoachDashboard />);
+        <div style={{padding:"0 22px 26px",display:"flex",flexDirection:"column",gap:"18px"}}>
+
+          <div>
+            <div style={{color:"#22C55E",fontWeight:"700",fontSize:"11px",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"8px"}}>✅ Do's</div>
+            <div style={{display:"flex",flexDirection:"column",gap:"5px"}}>
+              {athlete.dos.length > 0 ? athlete.dos.map(function(d,i) {
+                return <div key={i} style={{background:"#22C55E0C",border:"1px solid #22C55E1E",borderRadius:"10px",padding:"9px 13px",color:"#D4FAE0",fontSize:"13px",lineHeight:1.5,display:"flex",gap:"10px"}}><span style={{color:"#22C55E",flexShrink:0}}>→</span>{d}</div>;
+              }) : <div style={{color:"rgba(255,255,255,0.25)",fontSize:"13px",padding:"8px 0"}}>None on file</div>}
+            </div>
+          </div>
+
+          <div>
+            <div style={{color:"#EF4444",fontWeight:"700",fontSize:"11px",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"8px"}}>🚫 Don'ts</div>
+            <div style={{display:"flex",flexDirection:"column",gap:"5px"}}>
+              {athlete.donts.length > 0 ? athlete.donts.map(function(d,i) {
+                return <div key={i} style={{background:"#EF44440C",border:"1px solid #EF44441E",borderRadius:"10px",padding:"9px 13px",color:"#FED7D7",fontSize:"13px",lineHeight:1.5,display:"flex",gap:"10px"}}><span style={{color:"#EF4444",flexShrink:0}}>x</span>{d}</div>;
+              }) : <div style={{color:"rgba(255,255,255,0.25)",fontSize:"13px",padding:"8px 0"}}>None on file</div>}
+            </div>
+          </div>
+
+          <div style={{height:"1px",background:"rgba(255,255,255,0.06)"}} />
+
+          <div>
+            <div style={{color:"rgba(255,255,255,0.5)",fontWeight:"700",fontSize:"11px",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:"8px"}}>📋 Last Note</div>
+            {athlete.lastNote ? (
+              <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",padding:"13px 15px"}}>
+                <div style={{color:athlete.color,fontSize:"10px",fontFamily:"monospace",marginBottom:"6px"}}>{athlete.lastNote.date}</div>
+                <div style={{color:"rgba(255,255,255,0.8)",fontSize:"13px",lineHeight:1.6}}>{athlete.lastNote.text}</div>
+              </div>
+            ) : (
+              <div style={{padding:"13px 15px",color:"rgba(255,255,255,0.25)",fontSize:"13px",fontFamily:"monospace",background:"rgba(255,255,255,0.02)",borderRadius:"12px",border:"1px dashed rgba(255,255,255,0.07)"}}>No notes yet.</div>
+            )}
+          </div>
+
+          <div style={{background:athlete.color+"0A",border:"1px solid "+athlete.color+"25",borderRadius:"14px",padding:"15px"}}>
+            <div style={{color:athlete.color,fontSize:"11px",fontFamily:"monospace",fontWeight:"600",marginBottom:"9px",textTransform:"uppercase",letterSpacing:"0.08em"}}>+ Post-Class Note</div>
+            <textarea value={newNote} onChange={function(e){setNewNote(e.target.value);}} placeholder="How did they move today? Any pain, wins, or modifications needed next time..." rows={3} style={{width:"100%",background:"rgba(0,0,0,0.35)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:"9px",padding:"10px 12px",color:"#F0EDE8",fontSize:"13px",resize:"vertical",outline:"none",lineHeight:1.6,boxSizing:"border-box",fontFamily:"sans-serif"}} />
+            <button onClick={handleSave} style={{marginTop:"9px",background:saved?"#22C55E":athlete.color,border:"none",borderRadius:"9px",padding:"11px",color:"#fff",fontSize:"13px",fontWeight:"700",cursor:"pointer",width:"100%"}}>
+              {saved ? "Saved!" : "Save Note"}
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SetupScreen(props) {
+  var onConnect = props.onConnect;
+  var loadingState = useState(false);
+  var loading = loadingState[0]; var setLoading = loadingState[1];
+  var errorState = useState("");
+  var error = errorState[0]; var setError = errorState[1];
+
+  function handleConnect() {
+    setLoading(true); setError("");
+    fetch("https://coach-dashboard-api.onrender.com/health")
+      .then(function(r){ if(!r.ok) throw new Error("Status "+r.status); return r.json(); })
+      .then(function(){ onConnect(true); })
+      .catch(function(){ setError("Could not reach the server. Wait 30 seconds and try again."); setLoading(false); });
+  }
+
+  return (
+    <div style={{minHeight:"100vh",background:"#0D0E12",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px"}}>
+      <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"24px",padding:"36px",width:"100%",maxWidth:"360px",textAlign:"center"}}>
+        <div style={{width:"64px",height:"64px",borderRadius:"18px",background:"linear-gradient(135deg,#3A7BD5,#27AE8F)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",margin:"0 auto 22px"}}>🏋️</div>
+        <div style={{fontSize:"11px",color:"rgba(255,255,255,0.35)",fontFamily:"monospace",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:"6px"}}>Vegvisir CrossFit</div>
+        <div style={{fontSize:"22px",fontWeight:"700",color:"#F0EDE8",marginBottom:"10px"}}>Coach Dashboard</div>
+        <div style={{fontSize:"13px",color:"rgba(255,255,255,0.4)",lineHeight:1.6,marginBottom:"26px"}}>Tap below to connect to Wodify and load today's class roster.</div>
+        {error && <div style={{background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.25)",borderRadius:"10px",padding:"12px",marginBottom:"14px",color:"#FCA5A5",fontSize:"12px",fontFamily:"monospace",textAlign:"left",lineHeight:1.6}}>{error}</div>}
+        <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+          <button onClick={handleConnect} disabled={loading} style={{background:"linear-gradient(135deg,#3A7BD5,#2563EB)",border:"none",borderRadius:"12px",padding:"14px",color:"#fff",fontSize:"15px",fontWeight:"700",cursor:loading?"wait":"pointer",opacity:loading?0.7:1,boxShadow:"0 4px 20px rgba(58,123,213,0.35)"}}>
+            {loading ? "Connecting..." : "Connect to Wodify"}
+          </button>
+          <button onClick={function(){onConnect(false);}} style={{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",padding:"13px",color:"rgba(255,255,255,0.4)",fontSize:"13px",cursor:"pointer"}}>
+            Use demo data
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ClassSelector(props) {
+  var classes = props.classes; var onSelect = props.onSelect;
+  return (
+    <div style={{minHeight:"100vh",background:"#0D0E12",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px"}}>
+      <div style={{width:"100%",maxWidth:"460px"}}>
+        <div style={{fontSize:"11px",color:"rgba(255,255,255,0.35)",fontFamily:"monospace",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:"8px"}}>Today's Schedule</div>
+        <div style={{fontSize:"22px",fontWeight:"700",color:"#F0EDE8",marginBottom:"20px"}}>Select a Class</div>
+        <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+          {classes.map(function(cls){
+            return (
+              <button key={cls.id} onClick={function(){onSelect(cls);}} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"16px",padding:"18px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",textAlign:"left",width:"100%"}}>
+                <div>
+                  <div style={{color:"#F0EDE8",fontSize:"15px",fontWeight:"600"}}>{cls.name}</div>
+                  <div style={{color:"rgba(255,255,255,0.4)",fontSize:"12px",fontFamily:"monospace",marginTop:"3px"}}>{cls.time} · {cls.enrolled} athletes</div>
+                </div>
+                <span style={{color:"rgba(255,255,255,0.3)",fontSize:"20px"}}>›</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CoachDashboard() {
+  var screenState = useState("setup");
+  var screen = screenState[0]; var setScreen = screenState[1];
+  var liveState = useState(false);
+  var isLive = liveState[0]; var setIsLive = liveState[1];
+  var classesState = useState([]);
+  var classes = classesState[0]; var setClasses = classesState[1];
+  var selClassState = useState(null);
+  var selectedClass = selClassState[0]; var setSelectedClass = selClassState[1];
+  var athletesState = useState([]);
+  var athletes = athletesState[0]; var setAthletes = athletesState[1];
+  var loadingState = useState(false);
+  var loading = loadingState[0]; var setLoading = loadingState[1];
+  var selectedState = useState(null);
+  var selected = selectedState[0]; var setSelected = selectedState[1];
+  var searchState = useState("");
+  var search = searchState[0]; var setSearch = searchState[1];
+  var flagState = useState(false);
+  var filterFlagged = flagState[0]; var setFilterFlagged = flagState[1];
+
+  function loadClasses(live) {
+    if (!live) { setClasses(MOCK_CLASSES); setScreen("classes"); return; }
+    setLoading(true);
+    var today = new Date().toISOString().split("T")[0];
+    wodifyFetch("/programclasses?date="+today)
+      .then(function(data){
+        var mapped = (data.Results||data.results||[]).map(function(c){
+          return {id:c.Id||c.id,name:c.ProgramName||c.name,time:c.StartTime||c.time,enrolled:c.EnrolledCount||0};
+        });
+        setClasses(mapped.length ? mapped : MOCK_CLASSES);
+      })
+      .catch(function(){ setClasses(MOCK_CLASSES); })
+      .finally(function(){ setLoading(false); setScreen("classes"); });
+  }
+
+  function loadAthletes(cls) {
+    setSelectedClass(cls); setLoading(true);
+    if (!isLive) { setAthletes(MOCK_ATHLETES); setScreen("roster"); setLoading(false); return; }
+    wodifyFetch("/programclassreservations?class_id="+cls.id)
+      .then(function(resData){
+        var reservations = resData.Results||resData.results||[];
+        return Promise.all(reservations.map(function(r){
+          var memberId = r.UserId||r.user_id||r.MemberId;
+          var name = r.UserName||r.name||r.MemberName||"Unknown";
+          var photo = r.UserPhotoUrl||r.photo_url||null;
+          var p1 = wodifyFetch("/appointments?member_id="+memberId+"&appointment_type="+encodeURIComponent(CHECK_IN_APPT_NAME)+"&status=completed&sort=date_desc&limit=1")
+            .then(function(d){var a=d.Results||d.results||[];return a.length?new Date(a[0].Date||a[0].date):null;})
+            .catch(function(){return null;});
+          var p2 = wodifyFetch("/members/"+memberId)
+            .then(function(p){
+              var dos = (p.CustomFields&&p.CustomFields.Dos)?p.CustomFields.Dos.split("\n").filter(Boolean):[];
+              var donts = (p.CustomFields&&p.CustomFields.Donts)?p.CustomFields.Donts.split("\n").filter(Boolean):[];
+              var noteText = p.CustomFields&&(p.CustomFields.CoachNote||p.CustomFields.LastNote);
+              var noteDate = p.CustomFields&&p.CustomFields.CoachNoteDate;
+              return {injury:p.Notes||p.MedicalNotes||p.notes||"No notes on file",dos:dos,donts:donts,lastNote:noteText?{date:noteDate||"—",text:noteText}:null};
+            })
+            .catch(function(){return {injury:"No notes on file",dos:[],donts:[],lastNote:null};});
+          return Promise.all([p1,p2]).then(function(results){
+            return {id:memberId,name:name,photo:photo,color:colorForName(name),injury:results[1].injury,dos:results[1].dos,donts:results[1].donts,lastNote:results[1].lastNote,lastCheckIn:results[0]};
+          });
+        }));
+      })
+      .then(function(list){ setAthletes(list); })
+      .catch(function(){ setAthletes(MOCK_ATHLETES); })
+      .finally(function(){ setLoading(false); setScreen("roster"); });
+  }
+
+  function handleConnect(live) { setIsLive(live); loadClasses(live); }
+
+  function handleSaveNote(id, text) {
+    var today = new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"});
+    var newNote = {date:today,text:text};
+    setAthletes(function(prev){return prev.map(function(a){return a.id===id?Object.assign({},a,{lastNote:newNote}):a;});});
+    setSelected(function(prev){return prev&&prev.id===id?Object.assign({},prev,{lastNote:newNote}):prev;});
+  }
+
+  var filtered = athletes
+    .filter(function(a){return a.name.toLowerCase().indexOf(search.toLowerCase())!==-1;})
+    .filter(function(a){return filterFlagged?needsCheckIn(a.lastCheckIn):true;});
+  var flaggedCount = athletes.filter(function(a){return needsCheckIn(a.lastCheckIn);}).length;
+
+  if (screen==="setup") return <SetupScreen onConnect={handleConnect} />;
+  if (screen==="classes") return loading
+    ? <div style={{minHeight:"100vh",background:"#0D0E12",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.4)",fontFamily:"monospace"}}>Loading classes...</div>
+    : <ClassSelector classes={classes} onSelect={loadAthletes} />;
+
+  return (
+    <div style={{minHeight:"100vh",background:"#0D0E12",color:"#F0EDE8"}}>
+      <style dangerouslySetInnerHTML={{__html:"@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',sans-serif;}textarea::placeholder,input::placeholder{color:rgba(255,255,255,0.2);}"}} />
+
+      <div style={{borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"10px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+          <button onClick={function(){setScreen("classes");}} style={{background:"rgba(255,255,255,0.06)",border:"none",borderRadius:"8px",padding:"7px 12px",color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:"12px",fontFamily:"monospace"}}>
+            Back
+          </button>
+          <div>
+            <div style={{fontSize:"11px",color:"rgba(255,255,255,0.35)",fontFamily:"monospace",textTransform:"uppercase",letterSpacing:"0.08em"}}>
+              {selectedClass&&selectedClass.time?selectedClass.time+" · ":""}{new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}
+            </div>
+            <div style={{fontSize:"17px",fontWeight:"700"}}>{selectedClass?selectedClass.name:"Class Roster"}</div>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}}>
+          {flaggedCount>0 && (
+            <button onClick={function(){setFilterFlagged(function(f){return !f;});}} style={{background:filterFlagged?"#FBBF24":"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:"20px",padding:"6px 12px",color:filterFlagged?"#000":"#FBBF24",fontSize:"12px",fontWeight:"700",fontFamily:"monospace",cursor:"pointer"}}>
+              ⚠ {flaggedCount} overdue
+            </button>
+          )}
+          <div style={{background:"rgba(255,255,255,0.06)",borderRadius:"20px",padding:"6px 12px",fontSize:"12px",fontFamily:"monospace",color:"rgba(255,255,255,0.5)"}}>
+            {athletes.length} athletes
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:"5px",background:isLive?"rgba(34,197,94,0.1)":"rgba(255,255,255,0.04)",border:"1px solid "+(isLive?"rgba(34,197,94,0.25)":"rgba(255,255,255,0.08)"),borderRadius:"20px",padding:"6px 12px",fontSize:"11px",fontFamily:"monospace",color:isLive?"#22C55E":"rgba(255,255,255,0.3)"}}>
+            <span style={{width:"5px",height:"5px",borderRadius:"50%",background:isLive?"#22C55E":"#444",display:"inline-block"}} />
+            {isLive?"Wodify live":"Demo"}
+          </div>
+        </div>
+      </div>
+
+      <div style={{padding:"16px 20px 0"}}>
+        <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Search athletes..." style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",padding:"10px 14px",width:"100%",maxWidth:"300px",color:"#F0EDE8",fontSize:"13px",outline:"none"}} />
+      </div>
+
+      {loading ? (
+        <div style={{padding:"60px",textAlign:"center",color:"rgba(255,255,255,0.3)",fontFamily:"monospace"}}>Loading athletes...</div>
+      ) : (
+        <div style={{padding:"16px 20px 40px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"12px"}}>
+          {filtered.map(function(a){return <AthleteCard key={a.id} athlete={a} onClick={setSelected} />;}) }
+          {filtered.length===0 && <div style={{gridColumn:"1/-1",textAlign:"center",padding:"48px",color:"rgba(255,255,255,0.25)",fontFamily:"monospace"}}>No athletes match your filter.</div>}
+        </div>
+      )}
+
+      {selected && <AthleteModal athlete={selected} onClose={function(){setSelected(null);}} onSaveNote={handleSaveNote} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<CoachDashboard />);
+
   </script>
 </body>
 </html>
