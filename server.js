@@ -5,22 +5,19 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const WODIFY_API_KEY = process.env.WODIFY_API_KEY;
-const WODIFY_BASE = "https://api.wodify.com/v1";
+const WODIFY_BASE = "https://app-api.wodify.com/v1";
 
 app.use(cors());
 app.use(express.json());
 
-// Serve the coach dashboard
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// Proxy all Wodify API requests — uses x-api-key header (correct Wodify auth)
 app.get("/wodify/*", async (req, res) => {
   const wodifyPath = req.params[0];
   const query = new URLSearchParams(req.query).toString();
@@ -29,12 +26,18 @@ app.get("/wodify/*", async (req, res) => {
   try {
     const response = await fetch(url, {
       headers: {
-        "x-api-key": WODIFY_API_KEY,
+        "X-Api-Key": WODIFY_API_KEY,
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
     });
-    const data = await response.json();
-    res.status(response.status).json(data);
+    const text = await response.text();
+    console.log("Wodify response:", response.status, text.slice(0, 200));
+    try {
+      res.status(response.status).json(JSON.parse(text));
+    } catch {
+      res.status(response.status).send(text);
+    }
   } catch (err) {
     res.status(500).json({ error: "Failed to reach Wodify API", details: err.message });
   }
