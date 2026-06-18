@@ -5,7 +5,7 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const WODIFY_API_KEY = process.env.WODIFY_API_KEY;
-const WODIFY_BASE = "https://app-api.wodify.com/v1";
+const WODIFY_BASE = "https://api.wodify.com/v1";
 
 app.use(cors());
 app.use(express.json());
@@ -26,13 +26,13 @@ app.get("/wodify/*", async (req, res) => {
   try {
     const response = await fetch(url, {
       headers: {
-        "X-Api-Key": WODIFY_API_KEY,
+        "x-api-key": WODIFY_API_KEY,
         "Content-Type": "application/json",
         "Accept": "application/json",
       },
     });
     const text = await response.text();
-    console.log("Wodify response:", response.status, text.slice(0, 200));
+    console.log("Wodify response:", response.status, text.slice(0, 300));
     try {
       res.status(response.status).json(JSON.parse(text));
     } catch {
