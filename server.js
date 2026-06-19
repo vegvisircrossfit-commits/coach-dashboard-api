@@ -25,45 +25,70 @@ async function wGet(path) {
   return r.json();
 }
 
-// Known anchor: CrossFit 5AM on 2026-06-18 = class ID 174326847
-// Known anchor: CrossFit 6PM on 2027-06-15 = class ID 190794719
-// Delta: 16,467,872 IDs over 362 days = ~45,491 IDs/day
-const ANCHOR_DATE = "2026-06-18";
-const ANCHOR_ID = 174326847;
-const IDS_PER_DAY = 45491;
-
-// All recurring class IDs
 const RECURRING_IDS = new Set([
   205659, 195631, 195633, 254489, 195634, 195635, 522818,
   293074, 429300, 342890, 358767, 407780, 272141, 559450, 561511
 ]);
 
-// Binary search for a class near a target ID that matches today's date
-async function findClassForDate(targetId, today, maxAttempts = 10) {
-  let lo = targetId - IDS_PER_DAY * 2;
-  let hi = targetId + IDS_PER_DAY * 2;
-  let best = null;
+// CrossFit 5AM recurring class ID — used as our daily anchor
+const ANCHOR_RECURRING_ID = 205659;
 
-  for (let i = 0; i < maxAttempts; i++) {
+// Known anchor points to bootstrap binary search
+// Format: { date: "YYYY-MM-DD", id: XXXXXX }
+const KNOWN_ANCHORS = [
+  { date: "2026-06-18", id: 174326847 },
+  { date: "2026-06-19", id: 174420392 },
+  { date: "2026-06-22", id: 174558953 },
+];
+
+// Cache: { date -> anchorId }
+const anchorCache = {};
+KNOWN_ANCHORS.forEach(a => { anchorCache[a.date] = a.id; });
+
+// Binary search for today's 5AM anchor ID
+async function findAnchorId(today) {
+  if (anchorCache[today]) {
+    console.log(`Using cached anchor for ${today}: ${anchorCache[today]}`);
+    return anchorCache[today];
+  }
+
+  // Find the closest known anchor
+  const sorted = KNOWN_ANCHORS.slice().sort((a, b) => a.date.localeCompare(b.date));
+  let best = sorted[sorted.length - 1]; // default to most recent known
+  for (const a of sorted) {
+    if (a.date <= today) best = a;
+  }
+
+  // Estimate starting point
+  const daysDiff = Math.round((new Date(today) - new Date(best.date)) / 86400000);
+  let lo = best.id + daysDiff * 40000;
+  let hi = best.id + daysDiff * 100000 + 200000;
+  
+  console.log(`Binary searching for ${today} anchor between IDs ${lo} and ${hi}`);
+
+  // Binary search for the 5AM class on today's date
+  for (let i = 0; i < 30; i++) {
     const mid = Math.floor((lo + hi) / 2);
     try {
       const data = await wGet(`/classes/${mid}`);
-      if (data.start_date === today && !data.is_cancelled && RECURRING_IDS.has(data.recurring_class_id)) {
-        return data;
-      }
-      if (data.start_date && data.start_date < today) {
+      if (!data.start_date) { lo = mid + 1; continue; }
+      
+      if (data.start_date === today && data.recurring_class_id === ANCHOR_RECURRING_ID) {
+        console.log(`Found anchor at ID ${mid} for ${today}`);
+        anchorCache[today] = mid;
+        return mid;
+      } else if (data.start_date < today) {
         lo = mid + 1;
-      } else if (data.start_date && data.start_date > today) {
-        hi = mid - 1;
       } else {
-        // Not found, try nearby
-        break;
+        hi = mid - 1;
       }
     } catch (e) {
       lo = mid + 1;
     }
   }
-  return best;
+
+  // If binary search didn't find exact match, return midpoint as best guess
+  return Math.floor((lo + hi) / 2);
 }
 
 app.get("/today-classes", async (req, res) => {
@@ -71,47 +96,32 @@ app.get("/today-classes", async (req, res) => {
   console.log("Finding classes for:", today);
 
   try {
-    // Calculate approximate starting ID for today
-    const anchorDate = new Date(ANCHOR_DATE);
-    const todayDate = new Date(today);
-    const daysDiff = Math.round((todayDate - anchorDate) / 86400000);
-    const approxId = ANCHOR_ID + Math.round(daysDiff * IDS_PER_DAY);
-    
-    console.log(`Days from anchor: ${daysDiff}, approx ID: ${approxId}`);
+    // Step 1: Find today's anchor ID (5AM CrossFit)
+    const anchorId = await findAnchorId(today);
+    console.log(`Anchor ID for ${today}: ${anchorId}`);
 
-    // Fetch a window of classes around the approximate ID
-    // Try IDs in a range and collect all that match today
-    const candidates = [];
-    const windowSize = 500; // Search ±500 IDs
-    const step = 1; // Classes clustered within a few IDs
+    // Step 2: Fetch all IDs within ±50 of anchor in parallel
+    const WINDOW = 50;
+    const ids = Array.from({ length: WINDOW * 2 + 1 }, (_, i) => anchorId - WINDOW + i);
 
-    for (let offset = -windowSize; offset <= windowSize; offset += step) {
-      const id = approxId + offset;
-      try {
-        const data = await wGet(`/classes/${id}`);
-        if (data.start_date === today && !data.is_cancelled) {
-          if (RECURRING_IDS.has(data.recurring_class_id)) {
-            candidates.push(data);
-            console.log(`Found: ${data.name} (${data.start_time})`);
-          }
-        }
-        // If we've gone past today, stop going forward
-        if (data.start_date && data.start_date > today && offset > 0) break;
-        if (data.start_date && data.start_date < today && offset < 0) {
-          offset = Math.max(offset, -step); // Don't go further back
-        }
-      } catch (e) {
-        // ID doesn't exist, skip
-      }
-    }
+    const results = await Promise.all(
+      ids.map(id =>
+        wGet(`/classes/${id}`)
+          .then(data => {
+            if (data.start_date === today && !data.is_cancelled && RECURRING_IDS.has(data.recurring_class_id)) {
+              console.log(`Found: ${data.name} (${data.start_time}) ID:${id}`);
+              return data;
+            }
+            return null;
+          })
+          .catch(() => null)
+      )
+    );
 
-    // Deduplicate by recurring_class_id, keep the one for today
-    const seen = new Set();
-    const found = candidates.filter(c => {
-      if (seen.has(c.recurring_class_id)) return false;
-      seen.add(c.recurring_class_id);
-      return true;
-    }).sort((a, b) => a.start_time > b.start_time ? 1 : -1);
+    const found = results
+      .filter(Boolean)
+      .filter((c, i, arr) => arr.findIndex(x => x.recurring_class_id === c.recurring_class_id) === i)
+      .sort((a, b) => a.start_time > b.start_time ? 1 : -1);
 
     console.log(`Total found: ${found.length} classes for ${today}`);
     res.json({ classes: found, date: today });
@@ -132,7 +142,7 @@ app.get("/wodify/*", async (req, res) => {
       headers: { "x-api-key": WODIFY_API_KEY, "Accept": "application/json", "Content-Type": "application/json" },
     });
     const text = await response.text();
-    console.log("Status:", response.status, "Body:", text.slice(0, 300));
+    console.log("Status:", response.status, "Body:", text.slice(0, 200));
     try { res.status(response.status).json(JSON.parse(text)); }
     catch { res.status(response.status).send(text); }
   } catch (err) {
