@@ -82,8 +82,8 @@ app.get("/today-classes", async (req, res) => {
     // Fetch a window of classes around the approximate ID
     // Try IDs in a range and collect all that match today
     const candidates = [];
-    const windowSize = 2000; // Search ±2000 IDs around estimate
-    const step = 100;
+    const windowSize = 500; // Search ±500 IDs
+    const step = 1; // Classes clustered within a few IDs
 
     for (let offset = -windowSize; offset <= windowSize; offset += step) {
       const id = approxId + offset;
