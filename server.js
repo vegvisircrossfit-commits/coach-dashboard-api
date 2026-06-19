@@ -107,9 +107,51 @@ app.get("/today-classes", async (req, res) => {
   }
 });
 
-// Get reservations for a class — try both base URLs
+// Get all reservations for a specific date (uses the working client_class_reservations endpoint)
+app.get("/daily-reservations", async (req, res) => {
+  const today = req.query.date ||
+    new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  const locationId = req.query.location_id || "6982";
+  const pageSize = req.query.page_size || 200;
+
+  try {
+    const data = await get(API_BASE,
+      `/client_class_reservations?location_id=${locationId}&date_from=${today}&date_to=${today}&page_size=${pageSize}`
+    );
+    if (data.HTTPCode || data.message) {
+      return res.status(500).json({ error: "Wodify error", detail: data });
+    }
+    console.log(`Daily reservations for ${today}: ${(data.client_class_reservations || []).length} records`);
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get reservations for a specific class — first tries date-based lookup, then direct endpoints
 app.get("/class-reservations/:classId", async (req, res) => {
   const { classId } = req.params;
+
+  // Strategy 1: Use the working date-based endpoint and filter by class_id
+  try {
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+    const data = await get(API_BASE,
+      `/client_class_reservations?location_id=6982&date_from=${today}&date_to=${today}&page_size=500`
+    );
+    if (data.client_class_reservations) {
+      const filtered = data.client_class_reservations.filter(
+        r => String(r.class_id) === String(classId)
+      );
+      console.log(`Date-based lookup for class ${classId}: ${filtered.length} reservations`);
+      res.json({ client_class_reservations: filtered, source: "date_filter" });
+      return;
+    }
+  } catch (e) {
+    console.log(`Date-based lookup failed: ${e.message}`);
+  }
+
+  // Strategy 2: Try direct endpoints as fallback
   const endpoints = [
     `/classes/${classId}/reservations`,
     `/classes/reservations?class_id=${classId}&page_size=100`,
