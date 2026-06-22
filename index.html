@@ -1,410 +1,779 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Coach Dashboard — Vegvisir CrossFit</title>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0D0E12; color: #F0EDE8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    button { font-family: inherit; }
-    textarea, input { font-family: inherit; }
-    textarea::placeholder, input::placeholder { color: rgba(255,255,255,0.25); }
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vegvisir CrossFit — Staff Hub</title>
+<link rel="preconnect" href="https://fonts.cdnfonts.com" />
+<link href="https://fonts.cdnfonts.com/css/glacial-indifference-2" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0F171F; color: #EAEFF3; font-family: 'Glacial Indifference', 'Montserrat', sans-serif; height: 100vh; overflow: hidden; }
+  #root { height: 100vh; display: flex; flex-direction: column; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #16222E; }
+  ::-webkit-scrollbar-thumb { background: #3E6E8E; border-radius: 2px; }
+  input, textarea, select { background: #1C2A38; border: 1px solid #2A3A49; color: #EAEFF3; border-radius: 4px; padding: 8px 12px; outline: none; font-family: 'Glacial Indifference', 'Montserrat', sans-serif; font-size: 13px; }
+  input:focus, textarea:focus, select:focus { border-color: #3E6E8E; }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 3px; background: #2A3A49; border-radius: 2px; padding: 0; border: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #3E6E8E; cursor: pointer; }
+  .btn { cursor: pointer; border: none; transition: all 0.15s ease; font-family: 'Glacial Indifference', 'Montserrat', sans-serif; }
+  .btn:hover { opacity: 0.85; }
+  .card { transition: border-color 0.15s; }
+  .card:hover { border-color: #3E6E8E !important; }
+  .fade-in { animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 700px) { .hide-mobile { display: none !important; } }
+</style>
 </head>
 <body>
-  <div id="root"></div>
-  <script>
-  (function() {
-    var e = React.createElement;
-    var useState = React.useState;
+<div id="root"></div>
+<script>
+(function() {
+  var React = window.React;
+  var ReactDOM = window.ReactDOM;
+  var XLSX = window.XLSX;
+  var h = React.createElement;
+  var useState = React.useState;
+  var useEffect = React.useEffect;
+  var useRef = React.useRef;
+  var useCallback = React.useCallback;
+  var useMemo = React.useMemo;
 
-    var PROXY = "https://coach-dashboard-api.onrender.com/wodify";
-    var CHECK_IN_DAYS = 90;
-    // Name of your Athlete Check-in appointment type in Wodify — adjust if different
-    var CHECK_IN_SERVICE_NAME = "Athlete Check-in";
+  // ── Storage shim (uses localStorage since window.storage not available outside Claude) ──
+  var storage = {
+    get: function(key) {
+      try { var v = localStorage.getItem(key); return Promise.resolve(v ? { value: v } : null); }
+      catch(e) { return Promise.resolve(null); }
+    },
+    set: function(key, value) {
+      try { localStorage.setItem(key, value); return Promise.resolve({ value: value }); }
+      catch(e) { return Promise.resolve(null); }
+    }
+  };
 
-    function wFetch(path) {
-      return fetch(PROXY + path).then(function(r) {
-        if (!r.ok) throw new Error("API error " + r.status);
-        return r.json();
+  // ── Brand tokens ──
+  var C = {
+    accent: '#3E6E8E', accentHi: '#5A9ABF', navy: '#16222E', navy2: '#1C2A38',
+    navy3: '#243545', line: '#2A3A49', bg: '#0F171F', text: '#EAEFF3',
+    textDim: '#8A9AA8', textFaint: '#566673', gold: '#C9A84C', green: '#4F9D8C', purple: '#6B5B95'
+  };
+
+  // ══════════════════════════════════════════════════════
+  // WOD SEARCH
+  // ══════════════════════════════════════════════════════
+
+  var SAMPLE_WORKOUTS = [
+    { id:1, name:"Fran", duration:7, movements:["Thruster","Pull-Up"], weightMin:65, weightMax:95, type:"For Time", description:"21-15-9: Thrusters, Pull-ups" },
+    { id:2, name:"Murph", duration:60, movements:["Running","Pull-Up","Push-Up","Air Squat"], weightMin:0, weightMax:0, type:"For Time", description:"1 mile run, 100 pull-ups, 200 push-ups, 300 squats, 1 mile run" },
+    { id:3, name:"Grace", duration:5, movements:["Clean and Jerk"], weightMin:95, weightMax:135, type:"For Time", description:"30 Clean & Jerks" },
+    { id:4, name:"Helen", duration:12, movements:["Running","Kettlebell Swing","Pull-Up"], weightMin:35, weightMax:53, type:"For Time", description:"3 rounds: 400m run, 21 KB swings, 12 pull-ups" },
+    { id:5, name:"DT", duration:15, movements:["Deadlift","Hang Power Clean","Push Jerk"], weightMin:105, weightMax:155, type:"For Time", description:"5 rounds: 12 deadlifts, 9 hang power cleans, 6 push jerks" },
+    { id:6, name:"Cindy", duration:20, movements:["Pull-Up","Push-Up","Air Squat"], weightMin:0, weightMax:0, type:"AMRAP", description:"20 min AMRAP: 5 pull-ups, 10 push-ups, 15 squats" },
+    { id:7, name:"Annie", duration:10, movements:["Double-Under","Sit-Up"], weightMin:0, weightMax:0, type:"For Time", description:"50-40-30-20-10: Double-Unders, Sit-ups" },
+    { id:8, name:"Karen", duration:15, movements:["Wall Ball"], weightMin:14, weightMax:20, type:"For Time", description:"150 Wall Balls" },
+  ];
+
+  var WOD_KEY = 'crossfit-workouts-v1';
+  var BUCKETS = [
+    { key:'sprint', label:'Sprint', sub:'< 10 min', test:function(d){return d>0&&d<10;} },
+    { key:'medium', label:'Medium', sub:'10–17 min', test:function(d){return d>=10&&d<=17;} },
+    { key:'long', label:'Long', sub:'18+ min', test:function(d){return d>=18;} }
+  ];
+  var TYPE_COLORS = { 'For Time':{bg:C.accent,text:'#fff'}, AMRAP:{bg:C.green,text:'#fff'}, EMOM:{bg:C.purple,text:'#fff'} };
+
+  var MOVE_LIST = [
+    "Chest-to-Bar Pull-Up","Toes-to-Bar","Handstand Push-Up","Handstand Walk","Squat Snatch","Power Snatch",
+    "Hang Snatch","Squat Clean","Hang Power Clean","Power Clean","Hang Clean","Clean and Jerk",
+    "Overhead Squat","Front Squat","Back Squat","Air Squat","Goblet Squat","Kettlebell Swing",
+    "Shoulder to Overhead","Push Press","Push Jerk","Split Jerk","Strict Press","Bench Press",
+    "Wall Ball","Wall Walk","Box Jump","Box Step-Up","Rope Climb","Double-Under","Devil Press",
+    "Renegade Row","Bent Over Row","Dumbbell Row","Ring Row","Farmers Carry","Turkish Get-Up",
+    "Assault Bike","Slam Ball","Thruster","Pull-Up","Push-Up","Sit-Up","Deadlift","Sprint",
+    "Burpee","Snatch","Clean","Jerk","Muscle-Up","Ring Dip","Lunge","Pistol","GHD","Row","Run","Bike","Ski"
+  ].sort(function(a,b){return b.length-a.length;});
+
+  var MOVE_CANON = { "Run":"Running","Row":"Rowing","Echo Bike":"Assault Bike","Clean & Jerk":"Clean and Jerk" };
+
+  function makeBoundaryRegex(phrase) {
+    var esc = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp('(^|[^a-z])'+esc+'(s|es|ing|ning|ping|ging)?(?![a-z])','i');
+  }
+  var MOVE_REGEX = MOVE_LIST.map(function(mv){ return [mv, makeBoundaryRegex(mv.toLowerCase())]; });
+
+  function extractMovements(body) {
+    var low = body.toLowerCase(); var found = []; var used = [];
+    for (var i=0; i<MOVE_REGEX.length; i++) {
+      var mv = MOVE_REGEX[i][0]; var rx = MOVE_REGEX[i][1]; var lm = mv.toLowerCase();
+      if (!rx.test(low)) continue;
+      var insideLonger = MOVE_REGEX.some(function(pair){ return pair[0].length > mv.length && pair[0].toLowerCase().includes(lm) && pair[1].test(low); });
+      if (insideLonger) continue;
+      if (used.some(function(u){return u.includes(lm);})) continue;
+      used.push(lm); found.push(MOVE_CANON[mv]||mv);
+    }
+    return [...new Set(found)];
+  }
+
+  function parseNum(v){ var n=parseInt(v); return isNaN(n)?0:n; }
+  function uid(){ return Date.now()+Math.random(); }
+
+  function parseWodifyDetail(detail, dateStr) {
+    if (!detail) return null;
+    var text = String(detail).replace(/&amp;/g,'&').replace(/\\n/g,'\n');
+    var re = /([A-Z0-9][^\n(]{1,60}?)\s*\(([^)]*(?:AMRAP|Time|Rounds|EMOM|Reps|Load)[^)]*)\)/g;
+    var m, chosen=null, name='', typ='';
+    while ((m=re.exec(text))!==null) {
+      var n=m[1].trim();
+      if (/warm.?up|accessory|cool.?down|checkmark/i.test(n)) continue;
+      chosen=m; name=n; typ=m[2].trim(); break;
+    }
+    if (!chosen) return null;
+    name=name.replace(/\s*Rx$/i,'').trim();
+    var type='For Time';
+    if (/AMRAP/i.test(typ)) type='AMRAP';
+    else if (/EMOM/i.test(typ)) type='EMOM';
+    var after=text.slice(chosen.index+chosen[0].length);
+    var WOD_INT=/^(?:for time|amrap|emom|rounds?|rest|then|time cap|score|notes?|rx|scaled?)/i;
+    var lines=after.split('\n'); var cutIdx=-1; var acc=0;
+    for (var li=0;li<lines.length;li++) {
+      var ln=lines[li].trim();
+      var hdr=ln.match(/^([A-Z][A-Za-z]+(?:[ &\/-][A-Za-z]+){0,3})\s*:/);
+      if (li>0&&hdr&&!/\d/.test(hdr[1])&&!WOD_INT.test(hdr[1])){cutIdx=acc;break;}
+      acc+=lines[li].length+1;
+    }
+    if (cutIdx>=0) after=after.slice(0,cutIdx);
+    var nb=/\n[^\n(]{1,60}\([^)]*(?:No Measure|Checkmark|Weight|Reps|Rounds|Time|AMRAP|EMOM|Load)[^)]*\)/i.exec(after);
+    if (nb) after=after.slice(0,nb.index);
+    var body=after.split(/RPE:|Goal |Sweat:|Post WOD/)[0];
+    var duration=0;
+    var durSrcs=[/(\d+)\s*Min\w*\s*AMRAP/i.exec(text),/(\d+)\s*Min\w*\s*EMOM/i.exec(text),/Time Cap:\s*(\d+)/i.exec(text),/(\d+)\s*Min/i.exec(after)];
+    for (var di=0;di<durSrcs.length;di++){if(durSrcs[di]){duration=parseInt(durSrcs[di][1]);break;}}
+    var ws=[]; var wm;
+    var wre1=/(\d{2,3})\s*\/\s*\d{2,3}\s*(?:lb|BB)?/g;
+    while((wm=wre1.exec(text))!==null) ws.push(parseInt(wm[1]));
+    var wre2=/(\d{2,3})\s*(?:lb|BB)/g;
+    while((wm=wre2.exec(text))!==null) ws.push(parseInt(wm[1]));
+    var loads=ws.filter(function(w){return w>=10&&w<=400;});
+    var weightMin=loads.length?Math.min.apply(null,loads):0;
+    var weightMax=loads.length?Math.max.apply(null,loads):0;
+    var movements=extractMovements(body);
+    if (!movements.length) return null;
+    var PARTNER_RE=/you\s+go\s*[\/\\]\s*i\s+(rest|hold|go)|partner\s+(1\s*:|2\s*:)/i;
+    var partner=PARTNER_RE.test(text);
+    return {id:uid(),name,type,duration,weightMin,weightMax,movements,description:body.replace(/\s+/g,' ').trim().slice(0,300),date:dateStr||'',partner};
+  }
+
+  function parseRows(rows) {
+    var cols=Object.keys(rows[0]||{}).map(function(c){return c.toLowerCase();});
+    var isWodify=cols.some(function(c){return c.includes('component')&&c.includes('detail');});
+    if (isWodify) {
+      var dk=Object.keys(rows[0]).find(function(c){return /component.*detail/i.test(c);});
+      var dtk=Object.keys(rows[0]).find(function(c){return /date/i.test(c);});
+      return {workouts:rows.map(function(r){return parseWodifyDetail(r[dk],dtk?r[dtk]:'');}).filter(Boolean),format:'Wodify export'};
+    }
+    function find(row){
+      var keys=[].slice.call(arguments,1);
+      for (var ki=0;ki<keys.length;ki++){var hit=Object.keys(row).find(function(c){return c.toLowerCase().replace(/\s+/g,'')===keys[ki].toLowerCase();});if(hit&&row[hit]!==undefined&&row[hit]!=='')return String(row[hit]);}
+      return '';
+    }
+    var workouts=rows.map(function(row){
+      var name=find(row,'name','workoutname','title','wod'); if(!name) return null;
+      var descRaw=find(row,'description','notes','workout'); var movRaw=find(row,'movements','exercises');
+      var movements=movRaw?String(movRaw).split(/[,;\/]/).map(function(s){return s.trim();}).filter(Boolean):[];
+      var duration=parseNum(find(row,'duration','time','minutes','min'));
+      var weightMin=parseNum(find(row,'weightmin','minweight','weight'));
+      var weightMax=parseNum(find(row,'weightmax','maxweight'))||weightMin;
+      var typeRaw=find(row,'type','workouttype','scheme');
+      var type=['AMRAP','EMOM'].find(function(t){return typeRaw.toUpperCase().includes(t);})||'For Time';
+      return {id:uid(),name,duration,movements,weightMin,weightMax,type,description:descRaw};
+    }).filter(Boolean);
+    return {workouts,format:'standard columns'};
+  }
+
+  function WodSearch() {
+    var s = useState(null); var workouts=s[0]; var setWorkouts=s[1];
+    var nq=useState(''); var nameQuery=nq[0]; var setNameQuery=nq[1];
+    var sm=useState([]); var selectedMovements=sm[0]; var setSelectedMovements=sm[1];
+    var sb=useState([]); var selectedBuckets=sb[0]; var setSelectedBuckets=sb[1];
+    var po=useState(false); var partnerOnly=po[0]; var setPartnerOnly=po[1];
+    var wr=useState([0,200]); var weightRange=wr[0]; var setWeightRange=wr[1];
+    var ms=useState(''); var movementSearch=ms[0]; var setMovementSearch=ms[1];
+    var ex=useState(null); var expandedId=ex[0]; var setExpandedId=ex[1];
+    var af=useState(false); var showAddForm=af[0]; var setShowAddForm=af[1];
+    var nw=useState({name:'',duration:'',movements:[],weightMin:'',weightMax:'',type:'For Time',description:''}); var newWorkout=nw[0]; var setNewWorkout=nw[1];
+    var nmi=useState(''); var newMovementInput=nmi[0]; var setNewMovementInput=nmi[1];
+    var is=useState(null); var importStatus=is[0]; var setImportStatus=is[1];
+    var ss=useState('saved'); var saveStatus=ss[0]; var setSaveStatus=ss[1];
+    var fileRef=useRef(); var saveTimer=useRef();
+
+    useEffect(function(){
+      storage.get(WOD_KEY).then(function(r){ setWorkouts(r?JSON.parse(r.value):SAMPLE_WORKOUTS); }).catch(function(){ setWorkouts(SAMPLE_WORKOUTS); });
+    },[]);
+
+    var persist=useCallback(function(data){
+      clearTimeout(saveTimer.current); setSaveStatus('saving');
+      saveTimer.current=setTimeout(function(){
+        storage.set(WOD_KEY,JSON.stringify(data)).then(function(){setSaveStatus('saved');}).catch(function(){setSaveStatus('error');});
+      },600);
+    },[]);
+
+    var updateWorkouts=useCallback(function(updater){
+      setWorkouts(function(prev){ var next=typeof updater==='function'?updater(prev):updater; persist(next); return next; });
+    },[persist]);
+
+    var allMovements=useMemo(function(){return [...new Set((workouts||[]).flatMap(function(w){return w.movements;}))].sort();},[workouts]);
+    var filteredMovements=allMovements.filter(function(m){return m.toLowerCase().includes(movementSearch.toLowerCase());});
+    var filteredWorkouts=useMemo(function(){
+      if(!workouts) return [];
+      return workouts.filter(function(w){
+        var nm=w.name.toLowerCase().includes(nameQuery.toLowerCase());
+        var mm=selectedMovements.length===0||selectedMovements.every(function(m){return w.movements.includes(m);});
+        var dm=selectedBuckets.length===0||selectedBuckets.some(function(bk){var b=BUCKETS.find(function(b){return b.key===bk;});return b&&b.test(w.duration);});
+        var wm=w.weightMax===0?weightRange[0]===0:w.weightMax>=weightRange[0]&&w.weightMin<=weightRange[1];
+        var pm=!partnerOnly||w.partner===true;
+        return nm&&mm&&dm&&wm&&pm;
       });
-    }
+    },[workouts,nameQuery,selectedMovements,selectedBuckets,weightRange,partnerOnly]);
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-    function needsCheckIn(d) {
-      if (!d) return true;
-      return (Date.now() - new Date(d).getTime()) / 86400000 > CHECK_IN_DAYS;
-    }
-    function daysAgo(d) {
-      if (!d) return null;
-      return Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
-    }
-    function colorFor(n) {
-      var c = ["#E8643A","#3A7BD5","#27AE8F","#9B59B6","#E74C3C","#F39C12","#16A085","#2980B9"];
-      return c[Math.abs((n.charCodeAt(0)||0)+(n.charCodeAt(1)||0)) % c.length];
-    }
-    function initials(name) {
-      return name.split(" ").map(function(n){return n[0];}).join("").slice(0,2).toUpperCase();
-    }
-    function todayStr() {
-      return new Date().toISOString().split("T")[0];
-    }
+    var toggleMovement=function(m){setSelectedMovements(function(p){return p.includes(m)?p.filter(function(x){return x!==m;}):[...p,m];});};
+    var toggleBucket=function(k){setSelectedBuckets(function(p){return p.includes(k)?p.filter(function(x){return x!==k;}):[...p,k];});};
+    var clearFilters=function(){setNameQuery('');setSelectedMovements([]);setSelectedBuckets([]);setPartnerOnly(false);setWeightRange([0,200]);setMovementSearch('');};
+    var activeFilters=nameQuery||selectedMovements.length>0||selectedBuckets.length>0||partnerOnly||weightRange[0]>0||weightRange[1]<200;
 
-    // ── Avatar ────────────────────────────────────────────────────────────────
-    function Avatar(props) {
-      var a = props.athlete, sz = props.size||72, fs = props.fontSize||22;
-      var s = useState(false); var imgErr = s[0], setErr = s[1];
-      if (a.photo && !imgErr) {
-        return e('div',{style:{width:sz,height:sz,borderRadius:'50%',overflow:'hidden',flexShrink:0,border:'2px solid '+a.color+'44',boxShadow:'0 0 0 4px '+a.color+'18'}},
-          e('img',{src:a.photo,alt:a.name,onError:function(){setErr(true);},style:{width:'100%',height:'100%',objectFit:'cover'}})
-        );
-      }
-      return e('div',{style:{width:sz,height:sz,borderRadius:'50%',background:'linear-gradient(135deg,'+a.color+'cc,'+a.color+'66)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:fs,fontWeight:'700',color:'#fff',border:'2px solid '+a.color+'44',boxShadow:'0 0 0 4px '+a.color+'18',flexShrink:0}},
-        initials(a.name)
-      );
-    }
+    var addWorkout=function(){
+      if(!newWorkout.name||!newWorkout.duration) return;
+      var w={id:Date.now(),name:newWorkout.name,duration:parseNum(newWorkout.duration),movements:newWorkout.movements,weightMin:parseNum(newWorkout.weightMin),weightMax:parseNum(newWorkout.weightMax),type:newWorkout.type,description:newWorkout.description};
+      updateWorkouts(function(p){return [...p,w];});
+      setNewWorkout({name:'',duration:'',movements:[],weightMin:'',weightMax:'',type:'For Time',description:''});
+      setShowAddForm(false);
+    };
 
-    // ── Athlete Card ──────────────────────────────────────────────────────────
-    function Card(props) {
-      var a = props.athlete, onClick = props.onClick;
-      var flagged = needsCheckIn(a.lastCheckIn);
-      return e('button',{
-        onClick:function(){onClick(a);},
-        style:{background:'rgba(255,255,255,0.04)',border:flagged?'1px solid rgba(251,191,36,0.4)':'1px solid rgba(255,255,255,0.08)',borderRadius:'18px',padding:'20px 14px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:'10px',position:'relative',overflow:'hidden',textAlign:'center',width:'100%'}
-      },
-        e('div',{style:{position:'absolute',top:'-20px',right:'-20px',width:'70px',height:'70px',borderRadius:'50%',background:flagged?'#FBBF24':a.color,opacity:0.12,filter:'blur(18px)',pointerEvents:'none'}}),
-        flagged && e('div',{style:{position:'absolute',top:'9px',right:'9px',background:'#FBBF24',color:'#000',fontSize:'8px',fontWeight:'800',borderRadius:'5px',padding:'2px 6px'}},'CHECK-IN'),
-        e('div',{style:{position:'relative'}},
-          e(Avatar,{athlete:a,size:64,fontSize:19}),
-          flagged && e('div',{style:{position:'absolute',bottom:-2,right:-2,width:'17px',height:'17px',borderRadius:'50%',background:'#FBBF24',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'9px',fontWeight:'800',border:'2px solid #0D0E12',color:'#000'}},'!')
+    var handleFile=function(e){
+      var file=e.target.files&&e.target.files[0]; if(!file) return; setImportStatus(null);
+      var reader=new FileReader();
+      reader.onload=function(evt){
+        try {
+          var buf=evt.target.result; var wb=XLSX.read(buf,{type:'array'}); var ws=wb.Sheets[wb.SheetNames[0]]; var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+          if(!rows.length){setImportStatus({type:'error',msg:'Spreadsheet appears empty.'});return;}
+          var parsed=parseRows(rows);
+          if(!parsed.workouts.length){setImportStatus({type:'error',msg:'No workouts found.'});return;}
+          updateWorkouts(function(prev){
+            var existingNames=new Set(prev.map(function(w){return w.name.toLowerCase();})); var seen=new Set();
+            var fresh=parsed.workouts.filter(function(w){var k=w.name.toLowerCase();if(existingNames.has(k)||seen.has(k))return false;seen.add(k);return true;});
+            var dupes=parsed.workouts.length-fresh.length;
+            setImportStatus({type:'success',msg:'Imported '+fresh.length+' workouts from '+parsed.format+(dupes?' ('+dupes+' duplicates skipped)':'')+'.'});
+            return [...prev,...fresh];
+          });
+        } catch(err){setImportStatus({type:'error',msg:'Parse error: '+err.message});}
+      };
+      reader.readAsArrayBuffer(file); e.target.value='';
+    };
+
+    if(!workouts) return h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:C.textFaint,letterSpacing:'0.2em',textTransform:'uppercase'}},'Loading…');
+
+    return h('div',{style:{display:'flex',flexDirection:'column',height:'100%'}},
+      // Header
+      h('div',{style:{padding:'16px 20px 0',borderBottom:'1px solid '+C.line,flexShrink:0}},
+        h('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:12}},
+          h('div',null,
+            h('div',{style:{fontSize:10,letterSpacing:'0.25em',color:C.accent,fontWeight:700,marginBottom:3}},'WOD LIBRARY'),
+            h('h2',{style:{fontSize:26,fontWeight:900,lineHeight:1,letterSpacing:'-0.01em',textTransform:'uppercase'}},'CrossFit ',h('span',{style:{color:C.accent}},'Search'))
+          ),
+          h('div',{style:{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}},
+            h('div',{style:{fontSize:10,letterSpacing:'0.12em',textTransform:'uppercase',color:saveStatus==='saved'?'#4F9D8C':saveStatus==='saving'?'#888':'#f44'}},saveStatus==='saved'?'✓ Saved':saveStatus==='saving'?'Saving…':'⚠ Error'),
+            h('div',{style:{display:'flex',gap:6}},
+              h('button',{className:'btn',onClick:function(){fileRef.current&&fileRef.current.click();},style:{background:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'⬆ Import'),
+              h('input',{ref:fileRef,type:'file',accept:'.xlsx,.xls,.csv',style:{display:'none'},onChange:handleFile}),
+              h('button',{className:'btn',onClick:function(){setShowAddForm(function(p){return !p;});},style:{background:showAddForm?'#222':C.accent,color:'#fff',padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3}},showAddForm?'✕ Cancel':'+ Add WOD')
+            )
+          )
         ),
-        e('div',null,
-          e('div',{style:{color:'#F0EDE8',fontSize:'13px',fontWeight:'600',lineHeight:1.3}},a.name),
-          a.injury && e('div',{style:{marginTop:'4px',fontSize:'10px',color:a.color,background:a.color+'18',borderRadius:'20px',padding:'2px 8px',display:'inline-block',lineHeight:1.5}},a.injury.split('—')[0].trim())
+        h('input',{value:nameQuery,onChange:function(e){setNameQuery(e.target.value);},placeholder:'Search workouts…',style:{width:'100%',maxWidth:360,height:34,marginBottom:10,fontSize:13}}),
+        importStatus&&h('div',{className:'fade-in',style:{marginBottom:10,padding:'7px 12px',borderRadius:4,background:importStatus.type==='success'?'#0a2a0a':'#2a0a0a',border:'1px solid '+(importStatus.type==='success'?'#2a6':'#a33'),color:importStatus.type==='success'?'#4d4':'#f88',fontSize:12,display:'flex',justifyContent:'space-between'}},
+          h('span',null,importStatus.msg),h('span',{style:{cursor:'pointer'},onClick:function(){setImportStatus(null);}},'✕'))
+      ),
+      h('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
+        // Sidebar
+        h('div',{className:'hide-mobile',style:{width:200,borderRight:'1px solid '+C.line,padding:'14px 10px',overflowY:'auto',background:C.navy,flexShrink:0}},
+          h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
+            h('span',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.2em',color:C.textFaint,textTransform:'uppercase'}},'Filters'),
+            activeFilters&&h('button',{className:'btn',onClick:clearFilters,style:{background:'none',color:C.accent,fontSize:11,fontWeight:700}},'Clear')
+          ),
+          h('div',{style:{marginBottom:16}},
+            h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',color:C.textDim,textTransform:'uppercase',marginBottom:8}},'Duration'),
+            BUCKETS.map(function(b){
+              var active=selectedBuckets.includes(b.key);
+              return h('button',{key:b.key,className:'btn',onClick:function(){toggleBucket(b.key);},style:{display:'flex',justifyContent:'space-between',alignItems:'center',width:'100%',padding:'7px 9px',borderRadius:4,marginBottom:3,background:active?C.accent:C.navy2,border:'1px solid '+(active?C.accent:C.line),color:active?'#fff':C.text,fontFamily:'Glacial Indifference,Montserrat,sans-serif',textTransform:'uppercase'}},
+                h('span',{style:{fontSize:12,fontWeight:700}},b.label),
+                h('span',{style:{fontSize:10,color:active?'rgba(255,255,255,0.8)':C.textFaint}},b.sub));
+            })
+          ),
+          h('div',{style:{marginBottom:16}},
+            h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',color:C.textDim,textTransform:'uppercase',marginBottom:8}},'Format'),
+            h('button',{className:'btn',onClick:function(){setPartnerOnly(function(p){return !p;});},style:{display:'flex',justifyContent:'space-between',alignItems:'center',width:'100%',padding:'7px 9px',borderRadius:4,background:partnerOnly?C.accent:C.navy2,border:'1px solid '+(partnerOnly?C.accent:C.line),color:partnerOnly?'#fff':C.text,fontFamily:'Glacial Indifference,Montserrat,sans-serif',textTransform:'uppercase'}},
+              h('span',{style:{fontSize:12,fontWeight:700}},'👥 Partner'))
+          ),
+          h('div',{style:{marginBottom:16}},
+            h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',color:C.textDim,textTransform:'uppercase',marginBottom:8}},'Weight (lbs)'),
+            h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:5,fontSize:12,color:C.accent,fontWeight:700}},h('span',null,weightRange[0]),h('span',null,weightRange[1])),
+            h('input',{type:'range',min:0,max:200,value:weightRange[0],onChange:function(e){setWeightRange(function(p){return [Math.min(+e.target.value,p[1]-5),p[1]];});},style:{marginBottom:5}}),
+            h('input',{type:'range',min:0,max:200,value:weightRange[1],onChange:function(e){setWeightRange(function(p){return [p[0],Math.max(+e.target.value,p[0]+5)];});}})
+          ),
+          h('div',null,
+            h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',color:C.textDim,textTransform:'uppercase',marginBottom:8}},'Movements'),
+            h('input',{placeholder:'Filter…',value:movementSearch,onChange:function(e){setMovementSearch(e.target.value);},style:{width:'100%',marginBottom:7,height:30,fontSize:12}}),
+            h('div',{style:{display:'flex',flexDirection:'column',gap:3}},
+              filteredMovements.map(function(m){
+                var active=selectedMovements.includes(m);
+                return h('div',{key:m,onClick:function(){toggleMovement(m);},style:{padding:'4px 7px',background:active?C.accent:C.navy2,border:'1px solid '+(active?C.accent:C.line),borderRadius:3,fontSize:11,fontWeight:active?700:400,color:active?'#fff':'#aaa',cursor:'pointer',display:'flex',justifyContent:'space-between'}},
+                  h('span',null,m),active&&h('span',{style:{fontSize:10}},'✓'));
+              })
+            )
+          )
         ),
-        e('div',{style:{fontSize:'10px',color:'rgba(255,255,255,0.22)'}},'tap to view')
-      );
-    }
-
-    // ── Modal ─────────────────────────────────────────────────────────────────
-    function Modal(props) {
-      var a = props.athlete, onClose = props.onClose, onSave = props.onSaveNote;
-      var ns = useState(''); var note = ns[0], setNote = ns[1];
-      var ss = useState(false); var saved = ss[0], setSaved = ss[1];
-      var flagged = needsCheckIn(a.lastCheckIn);
-      var ds = daysAgo(a.lastCheckIn);
-
-      function save() {
-        if (!note.trim()) return;
-        onSave(a.id, note.trim());
-        setNote('');
-        setSaved(true);
-        setTimeout(function(){setSaved(false);}, 2500);
-      }
-
-      return e('div',{onClick:onClose,style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}},
-        e('div',{onClick:function(ev){ev.stopPropagation();},style:{background:'#14151A',borderRadius:'22px',border:flagged?'1px solid rgba(251,191,36,0.3)':'1px solid '+a.color+'33',boxShadow:'0 32px 64px rgba(0,0,0,0.6)',width:'100%',maxWidth:'480px',maxHeight:'92vh',overflowY:'auto'}},
-
-          // Header
-          e('div',{style:{padding:'20px 20px 16px',background:flagged?'linear-gradient(180deg,rgba(251,191,36,0.08) 0%,transparent 100%)':'linear-gradient(180deg,'+a.color+'10 0%,transparent 100%)',borderRadius:'22px 22px 0 0'}},
-            flagged && e('div',{style:{background:'rgba(251,191,36,0.12)',border:'1px solid rgba(251,191,36,0.28)',borderRadius:'10px',padding:'9px 12px',marginBottom:'14px',display:'flex',alignItems:'center',gap:'9px'}},
-              e('span',{style:{fontSize:'15px'}},'⚠️'),
-              e('div',null,
-                e('div',{style:{color:'#FBBF24',fontSize:'12px',fontWeight:'700'}},'Athlete Check-in Overdue'),
-                e('div',{style:{color:'rgba(251,191,36,0.65)',fontSize:'11px',marginTop:'2px'}},
-                  a.lastCheckIn ? 'Last check-in was '+ds+' days ago — over 90-day window' : 'No Athlete Check-in appointment on record'
-                )
+        // Main
+        h('div',{style:{flex:1,overflowY:'auto',padding:'14px 16px'}},
+          showAddForm&&h('div',{className:'fade-in',style:{background:C.navy2,border:'1px solid '+C.accent,borderRadius:6,padding:16,marginBottom:16}},
+            h('div',{style:{fontSize:11,fontWeight:800,letterSpacing:'0.15em',textTransform:'uppercase',color:C.accent,marginBottom:12}},'New Workout'),
+            h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}},
+              h('div',null,h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Name *'),h('input',{style:{width:'100%'},value:newWorkout.name,onChange:function(e){setNewWorkout(function(p){return {...p,name:e.target.value};});},placeholder:'e.g. Fran'})),
+              h('div',null,h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Type'),h('select',{style:{width:'100%',height:34},value:newWorkout.type,onChange:function(e){setNewWorkout(function(p){return {...p,type:e.target.value};});}},h('option',null,'For Time'),h('option',null,'AMRAP'),h('option',null,'EMOM'))),
+              h('div',null,h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Duration (min) *'),h('input',{type:'number',style:{width:'100%'},value:newWorkout.duration,onChange:function(e){setNewWorkout(function(p){return {...p,duration:e.target.value};});}})),
+              h('div',{style:{display:'flex',gap:6}},
+                h('div',{style:{flex:1}},h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Wt Min'),h('input',{type:'number',style:{width:'100%'},value:newWorkout.weightMin,onChange:function(e){setNewWorkout(function(p){return {...p,weightMin:e.target.value};});}})),
+                h('div',{style:{flex:1}},h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Wt Max'),h('input',{type:'number',style:{width:'100%'},value:newWorkout.weightMax,onChange:function(e){setNewWorkout(function(p){return {...p,weightMax:e.target.value};});}}))
               )
             ),
-            e('div',{style:{display:'flex',alignItems:'center',gap:'13px'}},
-              e(Avatar,{athlete:a,size:54,fontSize:16}),
-              e('div',{style:{flex:1}},
-                e('div',{style:{color:'#F0EDE8',fontSize:'18px',fontWeight:'700'}},a.name),
-                a.injury && e('div',{style:{color:a.color,fontSize:'11px',marginTop:'2px'}},a.injury)
+            h('div',{style:{marginBottom:8}},
+              h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Movements'),
+              h('div',{style:{display:'flex',gap:6,marginBottom:5}},
+                h('input',{style:{flex:1},value:newMovementInput,onChange:function(e){setNewMovementInput(e.target.value);},onKeyDown:function(e){if(e.key==='Enter'){var m=newMovementInput.trim();if(m&&!newWorkout.movements.includes(m))setNewWorkout(function(p){return {...p,movements:[...p.movements,m]};});setNewMovementInput('');}},placeholder:'Type and press Enter'})
               ),
-              e('button',{onClick:onClose,style:{background:'rgba(255,255,255,0.08)',border:'none',borderRadius:'50%',width:'32px',height:'32px',color:'rgba(255,255,255,0.5)',cursor:'pointer',fontSize:'20px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,lineHeight:1}},'×')
+              h('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},
+                newWorkout.movements.map(function(m){return h('span',{key:m,style:{background:C.line,borderRadius:2,padding:'2px 7px',fontSize:11,display:'flex',alignItems:'center',gap:4}},m,h('span',{style:{cursor:'pointer',color:C.accent},onClick:function(){setNewWorkout(function(p){return {...p,movements:p.movements.filter(function(x){return x!==m;})};});}},'×'));})
+              )
+            ),
+            h('div',{style:{marginBottom:10}},h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Description'),h('textarea',{style:{width:'100%',minHeight:50,resize:'vertical'},value:newWorkout.description,onChange:function(e){setNewWorkout(function(p){return {...p,description:e.target.value};});}})),
+            h('button',{className:'btn',onClick:addWorkout,style:{background:C.accent,color:'#fff',padding:'7px 18px',fontWeight:800,fontSize:12,letterSpacing:'0.1em',textTransform:'uppercase',borderRadius:3}},'Save Workout')
+          ),
+          h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}},
+            h('div',{style:{fontSize:12,color:C.textFaint}},h('span',{style:{color:C.accent,fontWeight:800,fontSize:18}},filteredWorkouts.length),' of ',workouts.length,' workouts'),
+            selectedMovements.length>0&&h('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}},
+              selectedMovements.map(function(m){return h('span',{key:m,style:{background:'rgba(62,110,142,0.12)',color:C.accent,border:'1px solid rgba(62,110,142,0.22)',borderRadius:2,padding:'2px 7px',fontSize:10,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',cursor:'pointer'},onClick:function(){toggleMovement(m);}},m,' ×');})
             )
           ),
-
-          // Body
-          e('div',{style:{padding:'0 20px 24px',display:'flex',flexDirection:'column',gap:'16px'}},
-
-            // Notes field from Wodify profile
-            a.injury && e('div',null,
-              e('div',{style:{color:'rgba(255,255,255,0.45)',fontWeight:'700',fontSize:'11px',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:'7px'}},'📋  Athlete Notes'),
-              e('div',{style:{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'11px',padding:'12px 14px',color:'rgba(255,255,255,0.75)',fontSize:'13px',lineHeight:1.6}},a.injury)
-            ),
-
-            // Tags
-            a.tags && a.tags.length > 0 && e('div',null,
-              e('div',{style:{color:'rgba(255,255,255,0.45)',fontWeight:'700',fontSize:'11px',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:'7px'}},'🏷  Tags'),
-              e('div',{style:{display:'flex',flexWrap:'wrap',gap:'6px'}},
-                a.tags.map(function(t,i){
-                  return e('div',{key:i,style:{background:a.color+'18',border:'1px solid '+a.color+'33',borderRadius:'20px',padding:'3px 10px',color:a.color,fontSize:'12px'}},t);
+          filteredWorkouts.length===0
+            ? h('div',{style:{textAlign:'center',padding:'50px 0',color:C.textFaint}},h('div',{style:{fontSize:36,marginBottom:10}},'🏋️'),h('div',{style:{fontSize:14,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em'}},'No workouts match'))
+            : h('div',{style:{display:'flex',flexDirection:'column',gap:7}},
+                filteredWorkouts.map(function(w){
+                  var expanded=expandedId===w.id;
+                  var tc=TYPE_COLORS[w.type]||{bg:C.navy3,text:'#fff'};
+                  return h('div',{key:w.id,className:'card',style:{background:C.navy2,borderRadius:5,overflow:'hidden',cursor:'pointer',border:'1px solid '+(expanded?C.accent:C.line)},onClick:function(){setExpandedId(expanded?null:w.id);}},
+                    h('div',{style:{padding:'11px 14px',display:'flex',alignItems:'center',gap:10}},
+                      h('div',{style:{flex:1,minWidth:0}},
+                        h('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:5}},
+                          h('span',{style:{fontSize:18,fontWeight:900,letterSpacing:'0.02em',textTransform:'uppercase'}},w.name),
+                          h('span',{style:{display:'inline-flex',alignItems:'center',padding:'2px 7px',borderRadius:2,fontSize:10,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',background:tc.bg,color:tc.text}},w.type),
+                          w.partner&&h('span',{style:{display:'inline-flex',alignItems:'center',padding:'2px 7px',borderRadius:2,fontSize:10,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',background:C.navy3,color:C.textDim,border:'1px solid '+C.line}},'👥 Partner')
+                        ),
+                        h('div',{style:{display:'flex',flexWrap:'wrap',gap:3}},
+                          w.movements.map(function(m){return h('span',{key:m,style:{fontSize:10,padding:'2px 5px',borderRadius:2,background:selectedMovements.includes(m)?'rgba(62,110,142,0.12)':C.navy3,color:selectedMovements.includes(m)?C.accent:'#777',border:'1px solid '+(selectedMovements.includes(m)?'rgba(62,110,142,0.3)':C.line),letterSpacing:'0.03em',cursor:'pointer'},onClick:function(e){e.stopPropagation();toggleMovement(m);}},m);})
+                        )
+                      ),
+                      h('div',{style:{display:'flex',gap:14,flexShrink:0,alignItems:'center'}},
+                        h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:18,fontWeight:800,color:C.accent,lineHeight:1}},w.duration||'—'),h('div',{style:{fontSize:9,color:C.textFaint,letterSpacing:'0.12em',textTransform:'uppercase'}},'min')),
+                        (w.weightMin>0||w.weightMax>0)?h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:12,fontWeight:700,color:C.text}},w.weightMin===w.weightMax?w.weightMax:w.weightMin+'–'+w.weightMax),h('div',{style:{fontSize:9,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'lbs'))
+                        :h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:10,fontWeight:600,color:C.textFaint}},'BW')),
+                        h('div',{style:{color:C.textFaint,fontSize:12,transform:expanded?'rotate(180deg)':'none',transition:'transform 0.2s'}},'▼')
+                      )
+                    ),
+                    expanded&&h('div',{className:'fade-in',style:{borderTop:'1px solid '+C.line,padding:'10px 14px',background:C.navy}},h('div',{style:{fontSize:13,color:C.textDim,lineHeight:1.6}},w.description||h('em',{style:{color:C.textFaint}},'No description.')))
+                  );
                 })
               )
-            ),
+        )
+      )
+    );
+  }
 
-            e('div',{style:{height:'1px',background:'rgba(255,255,255,0.06)'}}),
+  // ══════════════════════════════════════════════════════
+  // PLAYBOOK
+  // ══════════════════════════════════════════════════════
 
-            // Last coach note (stored in app)
-            e('div',null,
-              e('div',{style:{color:'rgba(255,255,255,0.45)',fontWeight:'700',fontSize:'11px',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:'7px'}},'💬  Last Coach Note'),
-              a.lastNote
-                ? e('div',{style:{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'11px',padding:'12px 14px'}},
-                    e('div',{style:{color:a.color,fontSize:'10px',marginBottom:'5px'}},a.lastNote.date),
-                    e('div',{style:{color:'rgba(255,255,255,0.8)',fontSize:'13px',lineHeight:1.6}},a.lastNote.text)
-                  )
-                : e('div',{style:{padding:'12px 14px',color:'rgba(255,255,255,0.22)',fontSize:'13px',background:'rgba(255,255,255,0.02)',borderRadius:'11px',border:'1px dashed rgba(255,255,255,0.07)'}},'No notes yet.')
-            ),
+  var PLAYBOOK_KEY='vegvisir-playbook-v2';
+  var CAT_COLORS={
+    'Gym Overview':{accent:'#e94560'},'Maintenance':{accent:'#4caf50'},'Cleaning & Supplies':{accent:'#2196f3'},
+    'Grounds':{accent:'#ff9800'},'Equipment & Ordering':{accent:'#9c27b0'},'Sales & Member Ops':{accent:C.gold},'Coaching':{accent:C.accentHi},'Other':{accent:C.textDim}
+  };
+  var PB_CATS=['All','Gym Overview','Maintenance','Cleaning & Supplies','Grounds','Equipment & Ordering','Sales & Member Ops','Coaching','Other'];
 
-            // Add note
-            e('div',{style:{background:a.color+'0A',border:'1px solid '+a.color+'22',borderRadius:'13px',padding:'14px'}},
-              e('div',{style:{color:a.color,fontSize:'10px',fontWeight:'700',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'0.08em'}},'+ Post-Class Note'),
-              e('textarea',{value:note,onChange:function(ev){setNote(ev.target.value);},placeholder:'How did they move today? Any pain, wins, or modifications needed next time...',rows:3,style:{width:'100%',background:'rgba(0,0,0,0.3)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'8px',padding:'10px 12px',color:'#F0EDE8',fontSize:'13px',resize:'vertical',outline:'none',lineHeight:1.6,boxSizing:'border-box'}}),
-              e('button',{onClick:save,style:{marginTop:'8px',background:saved?'#22C55E':a.color,border:'none',borderRadius:'8px',padding:'11px',color:'#fff',fontSize:'13px',fontWeight:'700',cursor:'pointer',width:'100%'}},
-                saved ? '✓ Note Saved' : 'Save Note'
+  function callClaude(messages,systemPrompt){
+    var body={model:'claude-sonnet-4-6',max_tokens:1000,messages:messages};
+    if(systemPrompt) body.system=systemPrompt;
+    return fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01'},body:JSON.stringify(body)})
+      .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e&&e.error&&e.error.message||'HTTP '+r.status);});return r.json();})
+      .then(function(data){return data.content.map(function(b){return b.text||'';}).join('').trim();});
+  }
+
+  function formatSOPAsFlow(title,rawText){
+    var sys='You are formatting SOPs for Vegvisir CrossFit gym. Return ONLY valid JSON, no markdown.\n\nFormat:\n{"summary":"One sentence","category":"Gym Overview|Maintenance|Cleaning & Supplies|Grounds|Equipment & Ordering|Sales & Member Ops|Coaching|Other","steps":[{"id":"1","type":"action","text":"What to do","next":"2"},{"id":"2","type":"decision","text":"Is X true?","yes":"3","no":"4"},{"id":"3","type":"end","text":"Done","next":null}]}\n\nTypes: action, decision, end, warning. Keep steps concise. 3-8 steps ideal.';
+    return callClaude([{role:'user',content:'Title: "'+title+'"\n\nContent:\n'+rawText}],sys)
+      .then(function(raw){
+        try{return JSON.parse(raw.replace(/```json|```/g,'').trim());}
+        catch(e){return {summary:rawText.slice(0,100),category:'Other',steps:[{id:'1',type:'action',text:rawText.slice(0,300),next:null}]};}
+      });
+  }
+
+  function transcribeAudio(file){
+    return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=rej;r.readAsDataURL(file);})
+      .then(function(b64){
+        return callClaude([{role:'user',content:[{type:'document',source:{type:'base64',media_type:'audio/mp4',data:b64}},{type:'text',text:'Transcribe this audio recording exactly as spoken. Output only the transcription, nothing else.'}]}]);
+      });
+  }
+
+  function FlowChart(props){
+    var steps=props.steps;
+    var ps=useState(new Set(['1'])); var visited=ps[0]; var setVisited=ps[1];
+    var pp=useState(['1']); var path=pp[0]; var setPath=pp[1];
+    var stepMap=useMemo(function(){var m={};(steps||[]).forEach(function(s){m[s.id]=s;});return m;},[steps]);
+    var reset=function(){setVisited(new Set(['1']));setPath(['1']);};
+    var follow=function(nextId){if(!nextId)return;setPath(function(p){return [...p,nextId];});setVisited(function(v){return new Set([...v,nextId]);});};
+    var currentStep=stepMap[path[path.length-1]];
+    var isComplete=!currentStep||(!currentStep.next&&currentStep.type!=='decision')||currentStep.type==='end';
+
+    var typeStyle=function(type){
+      if(type==='decision') return {bg:'rgba(201,168,76,0.12)',border:'1px solid '+C.gold,color:C.gold};
+      if(type==='warning') return {bg:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.4)',color:'#ef4444'};
+      if(type==='end') return {bg:'rgba(79,157,140,0.12)',border:'1px solid '+C.green,color:C.green};
+      return {bg:C.navy2,border:'1px solid '+C.line,color:C.text};
+    };
+
+    return h('div',{style:{padding:'12px 0'}},
+      path.map(function(id,idx){
+        var step=stepMap[id]; if(!step) return null;
+        var isLast=idx===path.length-1;
+        var ts=typeStyle(step.type);
+        return h('div',{key:id,style:{marginBottom:isLast?0:28,position:'relative'}},
+          idx>0&&h('div',{style:{position:'absolute',top:-24,left:18,width:2,height:24,background:C.line}}),
+          h('div',{style:{background:ts.bg,border:ts.border,borderRadius:7,padding:'10px 14px'}},
+            h('div',{style:{display:'flex',alignItems:'flex-start',gap:9}},
+              h('div',{style:{width:22,height:22,borderRadius:'50%',background:'rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,flexShrink:0,color:ts.color}},id),
+              h('div',{style:{flex:1}},
+                step.type==='decision'&&h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.gold,marginBottom:3}},'Decision'),
+                step.type==='warning'&&h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:'#ef4444',marginBottom:3}},'⚠ Warning'),
+                step.type==='end'&&h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.green,marginBottom:3}},'Complete'),
+                h('div',{style:{fontSize:13,lineHeight:1.5,color:ts.color}},step.text),
+                isLast&&step.type==='decision'&&h('div',{style:{display:'flex',gap:8,marginTop:10}},
+                  h('button',{className:'btn',onClick:function(){follow(step.yes);},style:{background:'rgba(79,157,140,0.15)',border:'1px solid '+C.green,color:C.green,padding:'5px 14px',borderRadius:4,fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase'}},'✓ Yes'),
+                  h('button',{className:'btn',onClick:function(){follow(step.no);},style:{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.4)',color:'#ef4444',padding:'5px 14px',borderRadius:4,fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase'}},'✕ No')
+                ),
+                isLast&&step.type!=='decision'&&step.next&&h('button',{className:'btn',onClick:function(){follow(step.next);},style:{marginTop:8,background:C.accent,color:'#fff',padding:'5px 12px',borderRadius:4,fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase'}},'Next →')
               )
             )
           )
-        )
-      );
-    }
+        );
+      }),
+      isComplete&&h('div',{style:{marginTop:20,paddingTop:14,borderTop:'1px solid '+C.line,display:'flex',justifyContent:'space-between',alignItems:'center'}},
+        h('div',{style:{fontSize:11,color:C.green,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}},'✓ Complete'),
+        path.length>1&&h('button',{className:'btn',onClick:reset,style:{background:'none',color:C.textFaint,fontSize:11,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}},'↺ Restart')
+      )
+    );
+  }
 
-    // ── Setup Screen ──────────────────────────────────────────────────────────
-    function Setup(props) {
-      var onConnect = props.onConnect;
-      var ls = useState(false); var loading = ls[0], setLoading = ls[1];
-      var es = useState(''); var err = es[0], setErr = es[1];
+  function Playbook(){
+    var sp=useState(null); var sops=sp[0]; var setSops=sp[1];
+    var se=useState(''); var search=se[0]; var setSearch=se[1];
+    var ac=useState('All'); var activeCategory=ac[0]; var setActiveCategory=ac[1];
+    var ss=useState(null); var selectedSop=ss[0]; var setSelectedSop=ss[1];
+    var up=useState(false); var uploading=up[0]; var setUploading=up[1];
+    var us=useState(null); var uploadStatus=us[0]; var setUploadStatus=us[1];
+    var am=useState(null); var addMode=am[0]; var setAddMode=am[1];
+    var ti=useState({title:'',content:''}); var textInput=ti[0]; var setTextInput=ti[1];
+    var sv=useState('saved'); var saveStatus=sv[0]; var setSaveStatus=sv[1];
+    var audioRef=useRef(); var saveTimer=useRef();
 
-      function connect() {
-        setLoading(true); setErr('');
-        fetch('https://coach-dashboard-api.onrender.com/health')
-          .then(function(r){ if(!r.ok) throw new Error(''); return r.json(); })
-          .then(function(){ onConnect(true); })
-          .catch(function(){ setErr('Could not reach the server. Wait 30 seconds and try again.'); setLoading(false); });
-      }
+    useEffect(function(){
+      storage.get(PLAYBOOK_KEY).then(function(r){setSops(r?JSON.parse(r.value):{});}).catch(function(){setSops({});});
+    },[]);
 
-      return e('div',{style:{minHeight:'100vh',background:'#0D0E12',display:'flex',alignItems:'center',justifyContent:'center',padding:'24px'}},
-        e('div',{style:{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'22px',padding:'34px',width:'100%',maxWidth:'340px',textAlign:'center'}},
-          e('div',{style:{width:'60px',height:'60px',borderRadius:'16px',background:'linear-gradient(135deg,#3A7BD5,#27AE8F)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'26px',margin:'0 auto 20px'}},'🏋️'),
-          e('div',{style:{fontSize:'10px',color:'rgba(255,255,255,0.3)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'5px'}},'Vegvisir CrossFit'),
-          e('div',{style:{fontSize:'21px',fontWeight:'700',color:'#F0EDE8',marginBottom:'9px'}},'Coach Dashboard'),
-          e('div',{style:{fontSize:'13px',color:'rgba(255,255,255,0.38)',lineHeight:1.6,marginBottom:'24px'}},"Connect to Wodify to load today's class roster."),
-          err && e('div',{style:{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.22)',borderRadius:'9px',padding:'11px',marginBottom:'13px',color:'#FCA5A5',fontSize:'12px',textAlign:'left',lineHeight:1.6}},err),
-          e('div',{style:{display:'flex',flexDirection:'column',gap:'9px'}},
-            e('button',{onClick:connect,disabled:loading,style:{background:'linear-gradient(135deg,#3A7BD5,#2563EB)',border:'none',borderRadius:'11px',padding:'13px',color:'#fff',fontSize:'14px',fontWeight:'700',cursor:loading?'wait':'pointer',opacity:loading?0.7:1,boxShadow:'0 4px 18px rgba(58,123,213,0.35)'}},
-              loading ? 'Connecting...' : 'Connect to Wodify'
-            ),
-            e('button',{onClick:function(){onConnect(false);},style:{background:'transparent',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'11px',padding:'12px',color:'rgba(255,255,255,0.38)',fontSize:'13px',cursor:'pointer'}},
-              'Use demo data'
+    var persist=useCallback(function(data){
+      clearTimeout(saveTimer.current); setSaveStatus('saving');
+      saveTimer.current=setTimeout(function(){
+        storage.set(PLAYBOOK_KEY,JSON.stringify(data)).then(function(){setSaveStatus('saved');}).catch(function(){setSaveStatus('error');});
+      },600);
+    },[]);
+
+    var addSop=useCallback(function(key,data){setSops(function(prev){var next=Object.assign({},prev);next[key]=data;persist(next);return next;});},[persist]);
+    var deleteSop=useCallback(function(key){setSops(function(prev){var next=Object.assign({},prev);delete next[key];persist(next);return next;});if(selectedSop===key)setSelectedSop(null);},[persist,selectedSop]);
+
+    var handleAudioFiles=useCallback(function(files){
+      var fileArray=Array.from(files);
+      setUploading(true); setUploadStatus({type:'info',msg:'Processing '+fileArray.length+' file'+(fileArray.length>1?'s':'')+'…'});
+      var chain=Promise.resolve();
+      fileArray.forEach(function(file){
+        chain=chain.then(function(){
+          var title=file.name.replace(/_/g,' ').replace(/\.m4a$/i,'');
+          setUploadStatus({type:'info',msg:'Transcribing: '+title+'…'});
+          return transcribeAudio(file).then(function(transcript){
+            setUploadStatus({type:'info',msg:'Formatting: '+title+'…'});
+            return formatSOPAsFlow(title,transcript).then(function(flow){
+              addSop('audio_'+file.name+'_'+Date.now(),{title,flow,source:'audio',addedAt:new Date().toISOString()});
+              setUploadStatus({type:'success',msg:'Added: '+title});
+            });
+          });
+        }).catch(function(err){setUploadStatus({type:'error',msg:'Error: '+err.message});});
+      });
+      chain.then(function(){setUploading(false);setAddMode(null);});
+    },[addSop]);
+
+    var handleTextSubmit=useCallback(function(){
+      if(!textInput.title||!textInput.content) return;
+      setUploading(true); setUploadStatus({type:'info',msg:'Formatting SOP…'});
+      formatSOPAsFlow(textInput.title,textInput.content).then(function(flow){
+        addSop('text_'+Date.now(),{title:textInput.title,flow,source:'text',addedAt:new Date().toISOString()});
+        setUploadStatus({type:'success',msg:'Added: '+textInput.title});
+        setTextInput({title:'',content:''}); setAddMode(null);
+      }).catch(function(err){setUploadStatus({type:'error',msg:'Error: '+err.message});})
+      .then(function(){setUploading(false);});
+    },[textInput,addSop]);
+
+    var filteredSops=useMemo(function(){
+      if(!sops) return [];
+      return Object.entries(sops).filter(function(entry){
+        var sop=entry[1]; var cat=sop.flow&&sop.flow.category||'Other';
+        var matchCat=activeCategory==='All'||cat===activeCategory;
+        var matchSearch=!search||sop.title.toLowerCase().includes(search.toLowerCase())||(sop.flow&&sop.flow.summary&&sop.flow.summary.toLowerCase().includes(search.toLowerCase()));
+        return matchCat&&matchSearch;
+      });
+    },[sops,search,activeCategory]);
+
+    var catCounts=useMemo(function(){
+      var counts={};
+      Object.values(sops||{}).forEach(function(s){var cat=s.flow&&s.flow.category||'Other';counts[cat]=(counts[cat]||0)+1;});
+      return counts;
+    },[sops]);
+
+    if(!sops) return h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:C.textFaint,letterSpacing:'0.2em',textTransform:'uppercase'}},'Loading…');
+
+    var statusColor=uploadStatus?uploadStatus.type==='success'?'#4d4':uploadStatus.type==='error'?'#f88':C.textDim:C.textDim;
+    var statusBg=uploadStatus?uploadStatus.type==='success'?'#0a2a0a':uploadStatus.type==='error'?'#2a0a0a':'rgba(62,110,142,0.1)':'transparent';
+    var statusBorder=uploadStatus?uploadStatus.type==='success'?'#2a6':uploadStatus.type==='error'?'#a33':C.line:C.line;
+
+    return h('div',{style:{display:'flex',flexDirection:'column',height:'100%'}},
+      h('div',{style:{padding:'16px 20px 0',borderBottom:'1px solid '+C.line,flexShrink:0}},
+        h('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:12}},
+          h('div',null,
+            h('div',{style:{fontSize:10,letterSpacing:'0.25em',color:C.gold,fontWeight:700,marginBottom:3}},'STAFF OPERATIONS'),
+            h('h2',{style:{fontSize:26,fontWeight:900,lineHeight:1,letterSpacing:'-0.01em',textTransform:'uppercase'}},'Playbook ',h('span',{style:{color:C.gold}},'SOP'))
+          ),
+          h('div',{style:{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}},
+            h('div',{style:{fontSize:10,letterSpacing:'0.12em',textTransform:'uppercase',color:saveStatus==='saved'?'#4F9D8C':saveStatus==='saving'?'#888':'#f44'}},saveStatus==='saved'?'✓ Saved':saveStatus==='saving'?'Saving…':'⚠ Error'),
+            h('div',{style:{display:'flex',gap:6}},
+              h('button',{className:'btn',onClick:function(){setAddMode(function(p){return p==='audio'?null:'audio';});},style:{background:addMode==='audio'?C.navy3:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'🎙 Audio'),
+              h('button',{className:'btn',onClick:function(){setAddMode(function(p){return p==='text'?null:'text';});},style:{background:addMode==='text'?C.gold:'#222',color:addMode==='text'?'#000':C.gold,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.gold}},'+ Add SOP')
             )
           )
+        ),
+        h('input',{value:search,onChange:function(e){setSearch(e.target.value);},placeholder:'Search SOPs…',style:{width:'100%',maxWidth:360,height:34,marginBottom:10,fontSize:13}}),
+        uploadStatus&&h('div',{className:'fade-in',style:{marginBottom:10,padding:'7px 12px',borderRadius:4,background:statusBg,border:'1px solid '+statusBorder,color:statusColor,fontSize:12,display:'flex',justifyContent:'space-between',alignItems:'center'}},
+          h('span',null,(uploading?'⏳ ':uploadStatus.type==='success'?'✓ ':'⚠ ')+uploadStatus.msg),
+          !uploading&&h('span',{style:{cursor:'pointer'},onClick:function(){setUploadStatus(null);}},'✕'))
+      ),
+      h('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
+        h('div',{className:'hide-mobile',style:{width:190,borderRight:'1px solid '+C.line,padding:'10px 0',overflowY:'auto',background:C.navy,flexShrink:0}},
+          PB_CATS.map(function(cat){
+            var colors=CAT_COLORS[cat]; var count=cat==='All'?Object.keys(sops).length:catCounts[cat];
+            return h('button',{key:cat,className:'btn',onClick:function(){setActiveCategory(cat);},style:{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',background:activeCategory===cat?'rgba(255,255,255,0.04)':'none',border:'none',borderLeft:activeCategory===cat?'2px solid '+(colors&&colors.accent||C.accent):'2px solid transparent',color:activeCategory===cat?C.text:C.textFaint,padding:'7px 12px',cursor:'pointer',fontSize:11,textAlign:'left'}},
+              h('span',null,cat),count?h('span',{style:{fontSize:9,background:'rgba(255,255,255,0.06)',padding:'1px 5px',borderRadius:8,color:C.textFaint}},count):null);
+          })
+        ),
+        h('div',{style:{flex:1,overflowY:'auto',padding:'14px 16px'}},
+          addMode==='text'&&h('div',{className:'fade-in',style:{background:C.navy2,border:'1px solid '+C.gold,borderRadius:6,padding:16,marginBottom:16}},
+            h('div',{style:{fontSize:11,fontWeight:800,letterSpacing:'0.15em',textTransform:'uppercase',color:C.gold,marginBottom:12}},'New SOP — Paste Text'),
+            h('div',{style:{marginBottom:8}},h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Title *'),h('input',{style:{width:'100%'},value:textInput.title,onChange:function(e){setTextInput(function(p){return {...p,title:e.target.value};});},placeholder:'e.g. If the gate is stuck'})),
+            h('div',{style:{marginBottom:10}},h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'SOP Content — paste notes, transcript, or procedure *'),h('textarea',{style:{width:'100%',minHeight:110,resize:'vertical',fontSize:13,lineHeight:1.5},value:textInput.content,onChange:function(e){setTextInput(function(p){return {...p,content:e.target.value};});},placeholder:'Paste or type the procedure. Claude converts it into a step-by-step flowchart.'})),
+            h('button',{className:'btn',onClick:handleTextSubmit,disabled:uploading||!textInput.title||!textInput.content,style:{background:uploading||!textInput.title||!textInput.content?'#333':C.gold,color:uploading||!textInput.title||!textInput.content?C.textFaint:'#000',padding:'7px 18px',fontWeight:800,fontSize:12,letterSpacing:'0.1em',textTransform:'uppercase',borderRadius:3,cursor:uploading?'not-allowed':'pointer'}},uploading?'Processing…':'Build Flowchart →')
+          ),
+          addMode==='audio'&&h('div',{className:'fade-in',style:{background:C.navy2,border:'1px solid '+C.line,borderRadius:6,padding:16,marginBottom:16}},
+            h('div',{style:{fontSize:11,fontWeight:800,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textDim,marginBottom:12}},'Upload Audio SOPs'),
+            h('div',{onClick:function(){audioRef.current&&audioRef.current.click();},onDrop:function(e){e.preventDefault();handleAudioFiles(e.dataTransfer.files);},onDragOver:function(e){e.preventDefault();},style:{border:'2px dashed '+C.line,borderRadius:7,padding:'28px 20px',cursor:'pointer',textAlign:'center'}},
+              h('div',{style:{fontSize:26,marginBottom:7}},'🎙'),
+              h('div',{style:{color:C.textDim,fontSize:12}},'Drag & drop .m4a files or click to browse'),
+              h('div',{style:{color:C.textFaint,fontSize:11,marginTop:3}},'Claude transcribes and builds flowcharts automatically')
+            ),
+            h('input',{ref:audioRef,type:'file',accept:'.m4a,audio/*',multiple:true,style:{display:'none'},onChange:function(e){handleAudioFiles(e.target.files);}})
+          ),
+          filteredSops.length===0
+            ? h('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:240,color:C.textFaint}},
+                h('div',{style:{fontSize:36,marginBottom:10}},'📋'),
+                h('div',{style:{fontSize:14,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:5}},Object.keys(sops).length===0?'No SOPs yet':'No results'),
+                h('div',{style:{fontSize:11,color:C.textFaint}},Object.keys(sops).length===0?'Use "+ Add SOP" to add your first procedure':'Try a different search or category')
+              )
+            : h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))',gap:12}},
+                filteredSops.map(function(entry){
+                  var key=entry[0]; var sop=entry[1];
+                  var cat=sop.flow&&sop.flow.category||'Other';
+                  var colors=CAT_COLORS[cat]||{accent:C.textDim};
+                  var isSelected=selectedSop===key;
+                  return h('div',{key:key,className:'card',style:{background:C.navy2,border:'1px solid '+(isSelected?colors.accent:C.line),borderRadius:9,padding:14,cursor:'pointer',gridColumn:isSelected?'1 / -1':undefined},onClick:function(){setSelectedSop(isSelected?null:key);}},
+                    h('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:7}},
+                      h('div',{style:{flex:1}},
+                        h('div',{style:{fontSize:8,textTransform:'uppercase',letterSpacing:'1px',color:colors.accent,marginBottom:3}},cat),
+                        h('div',{style:{fontWeight:700,fontSize:13}},sop.title)
+                      ),
+                      h('div',{style:{display:'flex',gap:7,alignItems:'center'}},
+                        h('span',{style:{color:C.textFaint,fontSize:12}},isSelected?'▲':'▼'),
+                        h('span',{style:{color:'#555',fontSize:12,cursor:'pointer'},onClick:function(e){e.stopPropagation();if(window.confirm('Delete "'+sop.title+'"?'))deleteSop(key);}},'🗑')
+                      )
+                    ),
+                    !isSelected&&h('div',{style:{fontSize:11,color:C.textFaint,lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}},sop.flow&&sop.flow.summary||'No summary'),
+                    isSelected&&sop.flow&&sop.flow.steps&&h(FlowChart,{steps:sop.flow.steps})
+                  );
+                })
+              )
         )
-      );
-    }
+      )
+    );
+  }
 
-    // ── Class Selector ────────────────────────────────────────────────────────
-    function ClassPicker(props) {
-      var classes = props.classes, onSelect = props.onSelect;
-      return e('div',{style:{minHeight:'100vh',background:'#0D0E12',display:'flex',alignItems:'center',justifyContent:'center',padding:'24px'}},
-        e('div',{style:{width:'100%',maxWidth:'440px'}},
-          e('div',{style:{fontSize:'10px',color:'rgba(255,255,255,0.3)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'7px'}},"Today's Schedule"),
-          e('div',{style:{fontSize:'21px',fontWeight:'700',color:'#F0EDE8',marginBottom:'18px'}},'Select a Class'),
-          e('div',{style:{display:'flex',flexDirection:'column',gap:'9px'}},
-            classes.map(function(cls){
-              var name = cls.name || cls.program_name || 'Class';
-              var count = (cls.reserved || 0) + (cls.signed_in || 0);
-              var time = cls.start_time ? cls.start_time.slice(0,5) : '';
-              return e('button',{key:cls.id,onClick:function(){onSelect(cls);},style:{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'14px',padding:'17px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',textAlign:'left',width:'100%'}},
-                e('div',null,
-                  e('div',{style:{color:'#F0EDE8',fontSize:'15px',fontWeight:'600'}},name),
-                  e('div',{style:{color:'rgba(255,255,255,0.38)',fontSize:'12px',marginTop:'2px'}},time+(count?' · '+count+' reserved':''))
+  // ══════════════════════════════════════════════════════
+  // DASHBOARD
+  // ══════════════════════════════════════════════════════
+
+  var PROXY='https://coach-dashboard-api.onrender.com';
+
+  function Dashboard(){
+    var cl=useState(null); var classes=cl[0]; var setClasses=cl[1];
+    var dt=useState(null); var date=dt[0]; var setDate=dt[1];
+    var er=useState(null); var error=er[0]; var setError=er[1];
+    var ld=useState(true); var loading=ld[0]; var setLoading=ld[1];
+    var lr=useState(null); var lastRefresh=lr[0]; var setLastRefresh=lr[1];
+
+    var load=useCallback(function(){
+      setLoading(true); setError(null);
+      fetch(PROXY+'/today-classes')
+        .then(function(r){if(!r.ok)throw new Error('Server error '+r.status);return r.json();})
+        .then(function(data){setClasses(data.classes||[]);setDate(data.date);setLastRefresh(new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));})
+        .catch(function(err){setError(err.message);})
+        .then(function(){setLoading(false);});
+    },[]);
+
+    useEffect(function(){load();},[load]);
+
+    var now=new Date(); var nowMins=now.getHours()*60+now.getMinutes();
+    var classStatus=function(cls){
+      if(!cls.start_time) return 'upcoming';
+      var parts=cls.start_time.split(':'); var h=parseInt(parts[0]); var m=parseInt(parts[1]);
+      var startMins=h*60+m; var endMins=startMins+60;
+      if(nowMins>=startMins&&nowMins<endMins) return 'live';
+      if(nowMins>=endMins) return 'done';
+      return 'upcoming';
+    };
+    var fmtTime=function(t){
+      if(!t) return ''; var parts=t.split(':'); var h=parseInt(parts[0]); var m=parseInt(parts[1]);
+      var ampm=h>=12?'PM':'AM'; var h12=h>12?h-12:h===0?12:h;
+      return h12+':'+(m<10?'0':'')+m+' '+ampm;
+    };
+
+    return h('div',{style:{display:'flex',flexDirection:'column',height:'100%',overflowY:'auto'}},
+      h('div',{style:{padding:'16px 20px 0',borderBottom:'1px solid '+C.line,flexShrink:0,marginBottom:16}},
+        h('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:12}},
+          h('div',null,
+            h('div',{style:{fontSize:10,letterSpacing:'0.25em',color:C.accentHi,fontWeight:700,marginBottom:3}},"TODAY'S SCHEDULE"),
+            h('h2',{style:{fontSize:26,fontWeight:900,lineHeight:1,letterSpacing:'-0.01em',textTransform:'uppercase'}},'Coach ',h('span',{style:{color:C.accentHi}},'Dashboard'))
+          ),
+          h('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5}},
+            lastRefresh&&h('div',{style:{fontSize:10,color:C.textFaint,letterSpacing:'0.1em'}},'Updated '+lastRefresh),
+            h('button',{className:'btn',onClick:load,style:{background:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'⟳ Refresh')
+          )
+        )
+      ),
+      h('div',{style:{padding:'0 20px 32px'}},
+        loading&&h('div',{style:{textAlign:'center',padding:'50px',color:C.textFaint,letterSpacing:'0.2em',textTransform:'uppercase',fontSize:12}},'Loading classes…'),
+        error&&h('div',{style:{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:7,padding:'14px 18px',color:'#ef4444',fontSize:13}},
+          '⚠ '+error+' — ',h('span',{style:{textDecoration:'underline',cursor:'pointer'},onClick:load},'Retry')),
+        !loading&&!error&&classes&&h('div',null,
+          h('div',{style:{fontSize:11,color:C.textFaint,marginBottom:14,letterSpacing:'0.05em'}},date+' · '+classes.length+' classes'),
+          h('div',{style:{display:'flex',flexDirection:'column',gap:10}},
+            classes.map(function(cls,i){
+              var status=classStatus(cls);
+              var totalRes=(cls.signed_in||0)+(cls.reserved||0);
+              var pct=cls.class_limit?Math.round(totalRes/cls.class_limit*100):0;
+              var coaches=cls.coaches&&cls.coaches.map(function(c){return c.coach;}).join(', ')||'—';
+              var barColor=pct>=90?'#ef4444':pct>=70?C.gold:C.accentHi;
+              return h('div',{key:i,className:'card',style:{background:C.navy2,border:'1px solid '+(status==='live'?'rgba(34,197,94,0.3)':C.line),borderRadius:9,padding:'14px 18px',opacity:status==='done'?0.5:1}},
+                h('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}},
+                  h('div',{style:{flex:1}},
+                    h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:5}},
+                      status==='live'&&h('span',{style:{width:7,height:7,borderRadius:'50%',background:'#22C55E',display:'inline-block',boxShadow:'0 0 6px #22C55E'}}),
+                      h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',color:status==='live'?'#22C55E':status==='done'?C.textFaint:C.text,textTransform:'uppercase'}},status==='live'?'● Live':status==='done'?'Done':'Upcoming')
+                    ),
+                    h('div',{style:{fontSize:20,fontWeight:900,textTransform:'uppercase',letterSpacing:'0.02em',marginBottom:3}},fmtTime(cls.start_time)),
+                    h('div',{style:{fontSize:13,color:C.textDim,marginBottom:6}},cls.name),
+                    h('div',{style:{fontSize:11,color:C.textFaint}},'Coach: ',h('span',{style:{color:C.text}},coaches))
+                  ),
+                  h('div',{style:{display:'flex',gap:16,flexShrink:0}},
+                    h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:24,fontWeight:900,color:C.accentHi,lineHeight:1}},cls.signed_in||0),h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Signed In')),
+                    h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:24,fontWeight:900,color:C.textDim,lineHeight:1}},cls.reserved||0),h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Reserved')),
+                    cls.waitlisted>0&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:24,fontWeight:900,color:C.gold,lineHeight:1}},cls.waitlisted),h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Waitlist'))
+                  )
                 ),
-                e('span',{style:{color:'rgba(255,255,255,0.28)',fontSize:'22px',lineHeight:1}},'›')
+                cls.class_limit>0&&h('div',{style:{marginTop:10}},
+                  h('div',{style:{display:'flex',justifyContent:'space-between',fontSize:9,color:C.textFaint,marginBottom:3}},h('span',null,totalRes+' / '+cls.class_limit+' spots'),h('span',null,pct+'% full')),
+                  h('div',{style:{background:C.navy,borderRadius:2,height:3,overflow:'hidden'}},h('div',{style:{height:'100%',borderRadius:2,width:pct+'%',background:barColor,transition:'width 0.5s'}}))
+                ),
+                cls.is_full&&h('div',{style:{marginTop:7,fontSize:10,color:'#ef4444',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}},'Class Full')
               );
             })
+          ),
+          h('div',{style:{marginTop:24,padding:'16px',background:C.navy2,border:'1px solid '+C.line,borderRadius:9,textAlign:'center'}},
+            h('div',{style:{fontSize:11,color:C.textFaint,marginBottom:3}},'🔒 Athlete roster coming soon'),
+            h('div',{style:{fontSize:10,color:C.textFaint,lineHeight:1.5}},'Names, injuries & coaching notes will appear here once the Wodify roster endpoint is available.')
           )
         )
-      );
-    }
+      )
+    );
+  }
 
-    // ── Main App ──────────────────────────────────────────────────────────────
-    function App() {
-      var sc = useState('setup'); var screen = sc[0], setScreen = sc[1];
-      var lv = useState(false); var isLive = lv[0], setIsLive = lv[1];
-      var cl = useState([]); var classes = cl[0], setClasses = cl[1];
-      var sl = useState(null); var selClass = sl[0], setSelClass = sl[1];
-      var at = useState([]); var athletes = at[0], setAthletes = at[1];
-      var ld = useState(false); var loading = ld[0], setLoading = ld[1];
-      var ms = useState(null); var modal = ms[0], setModal = ms[1];
-      var sr = useState(''); var search = sr[0], setSearch = sr[1];
-      var ff = useState(false); var filterFlag = ff[0], setFilterFlag = ff[1];
-      // Store coach notes locally keyed by client id
-      var nts = useState({}); var notes = nts[0], setNotes = nts[1];
+  // ══════════════════════════════════════════════════════
+  // ROOT
+  // ══════════════════════════════════════════════════════
 
-      function loadClasses(live) {
-        if (!live) {
-          // Demo mode
-          setClasses([
-            {id:'1',name:'CrossFit: 6:00 AM',program_name:'CrossFit',start_time:'06:00',reserved:6},
-            {id:'2',name:'CrossFit: 9:00 AM',program_name:'CrossFit',start_time:'09:00',reserved:4},
-            {id:'3',name:'Open Gym',program_name:'Open Gym',start_time:'11:00',reserved:8},
-          ]);
-          setScreen('classes');
-          return;
-        }
-        setLoading(true);
-        var today = todayStr();
-        // Get today's classes
-        fetch('https://coach-dashboard-api.onrender.com/today-classes').then(function(r){if(!r.ok)throw new Error('');return r.json();})
-          .then(function(d){
-            var list = d.classes || [];
-            // Filter out cancelled classes
-            list = list.filter(function(c){ return !c.is_cancelled; });
-            setClasses(list.length ? list : [{id:'none',name:'No classes today',program_name:'',start_time:'',reserved:0}]);
-          })
-          .catch(function(err){ console.error(err); setClasses([]); })
-          .finally(function(){ setLoading(false); setScreen('classes'); });
-      }
+  var TABS=[{id:'dashboard',label:'Dashboard',icon:'📅'},{id:'wods',label:'WOD Search',icon:'🏋️'},{id:'playbook',label:'Playbook',icon:'📋'}];
 
-      function loadAthletes(cls) {
-        setSelClass(cls); setLoading(true);
-        if (!isLive) {
-          // Demo athletes
-          setAthletes([
-            {id:'1',name:'Sarah Chen',photo:null,color:'#E8643A',injury:'Left shoulder impingement — no kipping, keep overhead light',tags:['Injury','Modified'],lastCheckIn:new Date(Date.now()-95*86400000)},
-            {id:'2',name:'Marcus Webb',photo:null,color:'#3A7BD5',injury:'Post ACL surgery (6 mo) — box squats only, sub bike for running',tags:['Injury'],lastCheckIn:new Date(Date.now()-30*86400000)},
-            {id:'3',name:'Priya Nair',photo:null,color:'#27AE8F',injury:'Disc herniation L4-L5 — no heavy deadlifts, brace core aggressively',tags:['Injury','Modified'],lastCheckIn:null},
-            {id:'4',name:'Derek Osei',photo:null,color:'#9B59B6',injury:'Wrist sprain (right) — use wrist wraps, no front rack',tags:[],lastCheckIn:new Date(Date.now()-45*86400000)},
-            {id:'5',name:'Jess Fontaine',photo:null,color:'#E74C3C',injury:'New member — prioritize mechanics, scale volume 20-30%',tags:['New Member'],lastCheckIn:new Date(Date.now()-10*86400000)},
-            {id:'6',name:'Tom Hartley',photo:null,color:'#F39C12',injury:'Rotator cuff tightness — band pull-aparts every warm-up, no behind neck',tags:[],lastCheckIn:new Date(Date.now()-100*86400000)},
-          ]);
-          setScreen('roster');
-          setLoading(false);
-          return;
-        }
-
-        // Get reservations for this class
-        wFetch('/classes/reservations/clients/search?q='+cls.id+'&page_size=100')
-          .then(function(rd){
-            var reservations = rd.client_class_reservations || [];
-            // Fetch client profiles in parallel
-            return Promise.all(reservations.map(function(r){
-              var clientId = r.client_id;
-              var name = r.client || 'Unknown';
-              return wFetch('/clients/'+clientId)
-                .then(function(c){
-                  return {
-                    id: String(clientId),
-                    name: (c.first_name||'') + ' ' + (c.last_name||''),
-                    photo: null, // Wodify API doesn't expose photo URLs
-                    color: colorFor(name),
-                    injury: c.notes || '',
-                    tags: c.tags || [],
-                    lastCheckIn: null, // Will check appointments separately
-                    member_since: c.member_since,
-                  };
-                })
-                .catch(function(){
-                  return {id:String(clientId),name:name,photo:null,color:colorFor(name),injury:'',tags:[],lastCheckIn:null};
-                });
-            }));
-          })
-          .then(function(list){
-            // Now check appointment bookings for Athlete Check-in for each client
-            return Promise.all(list.map(function(athlete){
-              return wFetch('/clients/'+athlete.id+'/bookings/search?q='+encodeURIComponent(CHECK_IN_SERVICE_NAME)+'&page_size=5')
-                .then(function(bd){
-                  var bookings = bd.client_appointment_bookings || [];
-                  // Find most recent completed one
-                  var completed = bookings.filter(function(b){ return b.status === 'SignedIn' || b.status === 'Completed'; });
-                  if (completed.length > 0) {
-                    completed.sort(function(a,b){ return new Date(b.local_start_datetime) - new Date(a.local_start_datetime); });
-                    athlete.lastCheckIn = new Date(completed[0].local_start_datetime);
-                  }
-                  return athlete;
-                })
-                .catch(function(){ return athlete; });
-            }));
-          })
-          .then(function(list){ setAthletes(list); })
-          .catch(function(err){ console.error(err); setAthletes([]); })
-          .finally(function(){ setLoading(false); setScreen('roster'); });
-      }
-
-      function handleConnect(live) { setIsLive(live); loadClasses(live); }
-
-      function saveNote(id, text) {
-        var today = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
-        var newNote = {date:today,text:text};
-        setNotes(function(prev){ var n=Object.assign({},prev); n[id]=newNote; return n; });
-        setModal(function(prev){ return prev&&prev.id===id?Object.assign({},prev,{lastNote:newNote}):prev; });
-      }
-
-      // Merge stored notes into athletes
-      var athletesWithNotes = athletes.map(function(a){
-        return Object.assign({},a,{lastNote: notes[a.id] || null});
-      });
-
-      var filtered = athletesWithNotes
-        .filter(function(a){return a.name.toLowerCase().indexOf(search.toLowerCase())!==-1;})
-        .filter(function(a){return filterFlag?needsCheckIn(a.lastCheckIn):true;});
-      var flagCount = athletesWithNotes.filter(function(a){return needsCheckIn(a.lastCheckIn);}).length;
-
-      if (screen==='setup') return e(Setup,{onConnect:handleConnect});
-      if (screen==='classes') return loading
-        ? e('div',{style:{minHeight:'100vh',background:'#0D0E12',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,0.35)'}},'Loading classes...')
-        : e(ClassPicker,{classes:classes,onSelect:loadAthletes});
-
-      return e('div',{style:{minHeight:'100vh',background:'#0D0E12',color:'#F0EDE8'}},
-
-        // Top bar
-        e('div',{style:{borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'14px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'9px'}},
-          e('div',{style:{display:'flex',alignItems:'center',gap:'11px'}},
-            e('button',{onClick:function(){setScreen('classes');setAthletes([]);},style:{background:'rgba(255,255,255,0.06)',border:'none',borderRadius:'7px',padding:'6px 11px',color:'rgba(255,255,255,0.45)',cursor:'pointer',fontSize:'12px'}},'← Back'),
-            e('div',null,
-              e('div',{style:{fontSize:'10px',color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em'}},
-                (selClass&&selClass.start_time?selClass.start_time.slice(0,5)+' · ':'')+new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})
-              ),
-              e('div',{style:{fontSize:'16px',fontWeight:'700'}},selClass?(selClass.name||selClass.program_name):'Class Roster')
-            )
+  function App(){
+    var ts=useState('dashboard'); var tab=ts[0]; var setTab=ts[1];
+    return h('div',{style:{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,fontFamily:"'Glacial Indifference','Montserrat',sans-serif",color:C.text}},
+      // Nav
+      h('div',{style:{background:C.navy,borderBottom:'1px solid '+C.line,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',height:50}},
+        h('div',{style:{display:'flex',alignItems:'center',gap:9}},
+          h('svg',{width:26,height:26,viewBox:'0 0 100 100'},
+            h('polygon',{points:'50,3 97,26 97,74 50,97 3,74 3,26',fill:'none',stroke:'#3E6E8E',strokeWidth:6}),
+            h('text',{x:50,y:67,textAnchor:'middle',fontSize:44,fontWeight:900,fill:'#EAEFF3',fontFamily:'Glacial Indifference,Montserrat,sans-serif'},'V')
           ),
-          e('div',{style:{display:'flex',alignItems:'center',gap:'7px',flexWrap:'wrap'}},
-            flagCount>0 && e('button',{onClick:function(){setFilterFlag(function(f){return !f;});},style:{background:filterFlag?'#FBBF24':'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.28)',borderRadius:'18px',padding:'5px 11px',color:filterFlag?'#000':'#FBBF24',fontSize:'11px',fontWeight:'700',cursor:'pointer'}},'⚠ '+flagCount+' overdue'),
-            e('div',{style:{background:'rgba(255,255,255,0.05)',borderRadius:'18px',padding:'5px 11px',fontSize:'11px',color:'rgba(255,255,255,0.45)'}},athletes.length+' athletes'),
-            e('div',{style:{display:'flex',alignItems:'center',gap:'5px',background:isLive?'rgba(34,197,94,0.08)':'rgba(255,255,255,0.04)',border:'1px solid '+(isLive?'rgba(34,197,94,0.22)':'rgba(255,255,255,0.07)'),borderRadius:'18px',padding:'5px 11px',fontSize:'11px',color:isLive?'#22C55E':'rgba(255,255,255,0.28)'}},
-              e('span',{style:{width:'5px',height:'5px',borderRadius:'50%',background:isLive?'#22C55E':'#444',display:'inline-block'}}),
-              isLive?'Wodify live':'Demo'
-            )
-          )
+          h('span',{className:'hide-mobile',style:{fontSize:12,fontWeight:800,letterSpacing:'0.15em',textTransform:'uppercase',color:C.text}},'Vegvisir')
         ),
-
-        // Search
-        e('div',{style:{padding:'14px 18px 0'}},
-          e('input',{value:search,onChange:function(ev){setSearch(ev.target.value);},placeholder:'Search athletes...',style:{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'9px',padding:'9px 13px',width:'100%',maxWidth:'280px',color:'#F0EDE8',fontSize:'13px',outline:'none'}})
+        h('div',{style:{display:'flex',gap:3}},
+          TABS.map(function(t){
+            return h('button',{key:t.id,className:'btn',onClick:function(){setTab(t.id);},style:{padding:'5px 12px',borderRadius:4,background:tab===t.id?C.navy3:'none',border:'1px solid '+(tab===t.id?C.line:'transparent'),color:tab===t.id?C.text:C.textFaint,fontSize:11,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',display:'flex',alignItems:'center',gap:5}},
+              h('span',null,t.icon),h('span',{className:'hide-mobile'},t.label));
+          })
         ),
+        h('div',{style:{width:70}})
+      ),
+      h('div',{style:{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}},
+        tab==='dashboard'&&h(Dashboard),
+        tab==='wods'&&h(WodSearch),
+        tab==='playbook'&&h(Playbook)
+      )
+    );
+  }
 
-        // Grid
-        loading
-          ? e('div',{style:{padding:'60px',textAlign:'center',color:'rgba(255,255,255,0.28)'}},'Loading athletes...')
-          : e('div',{style:{padding:'14px 18px 40px',display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(136px,1fr))',gap:'11px'}},
-              filtered.length
-                ? filtered.map(function(a){return e(Card,{key:a.id,athlete:a,onClick:function(athlete){ setModal(Object.assign({},athlete,{lastNote:notes[athlete.id]||null})); }});})
-                : e('div',{style:{gridColumn:'1/-1',textAlign:'center',padding:'48px',color:'rgba(255,255,255,0.22)'}},'No athletes found.')
-            ),
-
-        modal && e(Modal,{athlete:modal,onClose:function(){setModal(null);},onSaveNote:saveNote})
-      );
-    }
-
-    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
-  })();
-  </script>
+  ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+})();
+</script>
 </body>
 </html>
