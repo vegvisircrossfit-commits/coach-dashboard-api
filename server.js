@@ -256,7 +256,7 @@ Use empty string for missing fields. Never invent information.`;
 
   const raw = await callClaude(system, `Parse this new athlete note:\n\n${text}`);
   const parsed = await parseJSON(raw);
-  if (!parsed?.athlete) { console.log("Could not parse new athlete name"); return; }
+  if (!parsed?.athlete) { console.log("Could not parse new athlete name. Raw:", raw, "Parsed:", JSON.stringify(parsed)); return; }
 
   const existing = await findAthlete(parsed.athlete);
   if (existing) {
