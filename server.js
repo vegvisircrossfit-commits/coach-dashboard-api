@@ -226,12 +226,8 @@ async function callClaude(system, userMessage) {
     })
   });
   const data = await resp.json();
+  console.log("Claude API response status:", resp.status, "body:", JSON.stringify(data).slice(0, 200));
   return data.content?.map(b => b.text || "").join("").trim() || "";
-}
-
-async function parseJSON(text) {
-  try { return JSON.parse(text.replace(/```json|```/g, "").trim()); }
-  catch { return null; }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
