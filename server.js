@@ -211,7 +211,7 @@ async function addAthlete(fields) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function callClaude(system, userMessage) {
-async function parseJSON(text) {
+function parseJSON(text) {
   try { return JSON.parse(text.replace(/```json|```/g, "").trim()); }
   catch { return null; }
 }
