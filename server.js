@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const WODIFY_API_KEY          = process.env.WODIFY_API_KEY;
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "CHECK_ENV";
 const SLACK_SIGNING_SECRET    = process.env.SLACK_SIGNING_SECRET;
 const SLACK_BOT_TOKEN         = process.env.SLACK_BOT_TOKEN;
 const GOOGLE_SA_JSON          = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
