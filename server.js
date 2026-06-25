@@ -30,7 +30,11 @@ app.use(express.json());
 
 // ── Static ────────────────────────────────────────────────────────────────────
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/health", (req, res) => res.json({ status: "ok" }));
+app.get("/health", (req, res) => res.json({ 
+  status: "ok",
+  hasAnthropicKey: !!ANTHROPIC_API_KEY,
+  keyPrefix: ANTHROPIC_API_KEY ? ANTHROPIC_API_KEY.slice(0, 12) : "NOT SET"
+}));
 
 // ══════════════════════════════════════════════════════════════════════════════
 // WODIFY HELPERS
