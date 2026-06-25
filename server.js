@@ -211,7 +211,11 @@ async function addAthlete(fields) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function callClaude(system, userMessage) {
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+async function parseJSON(text) {
+  try { return JSON.parse(text.replace(/```json|```/g, "").trim()); }
+  catch { return null; }
+}
+const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
