@@ -43,7 +43,6 @@
   var useCallback = React.useCallback;
   var useMemo = React.useMemo;
 
-  // ── Storage shim (uses localStorage since window.storage not available outside Claude) ──
   var storage = {
     get: function(key) {
       try { var v = localStorage.getItem(key); return Promise.resolve(v ? { value: v } : null); }
@@ -55,7 +54,6 @@
     }
   };
 
-  // ── Brand tokens ──
   var C = {
     accent: '#3E6E8E', accentHi: '#5A9ABF', navy: '#16222E', navy2: '#1C2A38',
     navy3: '#243545', line: '#2A3A49', bg: '#0F171F', text: '#EAEFF3',
@@ -275,7 +273,6 @@
     if(!workouts) return h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:C.textFaint,letterSpacing:'0.2em',textTransform:'uppercase'}},'Loading…');
 
     return h('div',{style:{display:'flex',flexDirection:'column',height:'100%'}},
-      // Header
       h('div',{style:{padding:'16px 20px 0',borderBottom:'1px solid '+C.line,flexShrink:0}},
         h('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:12}},
           h('div',null,
@@ -296,7 +293,6 @@
           h('span',null,importStatus.msg),h('span',{style:{cursor:'pointer'},onClick:function(){setImportStatus(null);}},'✕'))
       ),
       h('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
-        // Sidebar
         h('div',{className:'hide-mobile',style:{width:200,borderRight:'1px solid '+C.line,padding:'14px 10px',overflowY:'auto',background:C.navy,flexShrink:0}},
           h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
             h('span',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.2em',color:C.textFaint,textTransform:'uppercase'}},'Filters'),
@@ -334,7 +330,6 @@
             )
           )
         ),
-        // Main
         h('div',{style:{flex:1,overflowY:'auto',padding:'14px 16px'}},
           showAddForm&&h('div',{className:'fade-in',style:{background:C.navy2,border:'1px solid '+C.accent,borderRadius:6,padding:16,marginBottom:16}},
             h('div',{style:{fontSize:11,fontWeight:800,letterSpacing:'0.15em',textTransform:'uppercase',color:C.accent,marginBottom:12}},'New Workout'),
@@ -640,6 +635,113 @@
   }
 
   // ══════════════════════════════════════════════════════
+  // ATHLETE CARD
+  // ══════════════════════════════════════════════════════
+
+  function AthleteCard(props) {
+    var athlete = props.athlete;
+    var onSaveNote = props.onSaveNote;
+    var ex = useState(false); var expanded = ex[0]; var setExpanded = ex[1];
+    var en = useState(false); var editing = en[0]; var setEditing = en[1];
+    var nc = useState(athlete.coach_notes||''); var noteContent = nc[0]; var setNoteContent = nc[1];
+    var sv = useState(null); var saving = sv[0]; var setSaving = sv[1];
+
+    var hasAlert = athlete.injuries || (athlete.next_checkin && new Date(athlete.next_checkin) < new Date());
+    var checkinOverdue = athlete.next_checkin && new Date(athlete.next_checkin) < new Date();
+
+    var saveNote = function() {
+      setSaving('saving');
+      fetch('https://coach-dashboard-api.onrender.com/athletes/'+athlete.row_number, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coach_notes: noteContent })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function() { setSaving('saved'); setEditing(false); if(onSaveNote) onSaveNote(athlete.row_number, noteContent); })
+      .catch(function() { setSaving('error'); });
+    };
+
+    return h('div',{style:{background:C.navy2,border:'1px solid '+(hasAlert?'rgba(239,68,68,0.3)':C.line),borderRadius:9,overflow:'hidden',marginBottom:10}},
+      // Header row — always visible
+      h('div',{style:{padding:'12px 16px',cursor:'pointer',display:'flex',alignItems:'center',gap:12},onClick:function(){setExpanded(function(p){return !p;});}},
+        // Avatar
+        h('div',{style:{width:38,height:38,borderRadius:'50%',background:C.navy3,border:'1px solid '+C.line,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,fontWeight:800,color:C.accentHi,flexShrink:0}},
+          athlete.athlete.charAt(0).toUpperCase()),
+        // Name + quick flags
+        h('div',{style:{flex:1,minWidth:0}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:3}},
+            h('span',{style:{fontSize:14,fontWeight:800,letterSpacing:'0.02em'}},athlete.athlete),
+            checkinOverdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',padding:'1px 6px',borderRadius:2}},'Check-in Due'),
+            athlete.upcoming&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.3)',padding:'1px 6px',borderRadius:2}},'✈ Trip')
+          ),
+          athlete.injuries
+            ? h('div',{style:{fontSize:11,color:'#ef4444',fontWeight:600}},'⚠ '+athlete.injuries)
+            : h('div',{style:{fontSize:11,color:C.textFaint}},athlete.goals||'No notes on file')
+        ),
+        h('div',{style:{color:C.textFaint,fontSize:12,transform:expanded?'rotate(180deg)':'none',transition:'transform 0.2s',flexShrink:0}},'▼')
+      ),
+
+      // Expanded detail
+      expanded&&h('div',{className:'fade-in',style:{borderTop:'1px solid '+C.line,padding:'14px 16px',background:C.navy}},
+        // Goals + RX
+        (athlete.goals||athlete.rx)&&h('div',{style:{display:'flex',gap:16,marginBottom:14}},
+          athlete.goals&&h('div',{style:{flex:1}},
+            h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:4}},'Goals'),
+            h('div',{style:{fontSize:12,color:C.textDim,lineHeight:1.5}},athlete.goals)
+          ),
+          athlete.rx&&h('div',{style:{flex:1}},
+            h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:4}},'Prescription / RX'),
+            h('div',{style:{fontSize:12,color:C.textDim,lineHeight:1.5}},athlete.rx)
+          )
+        ),
+
+        // Dos / Don'ts
+        (athlete.dos||athlete.donts)&&h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}},
+          athlete.dos&&h('div',{style:{background:'rgba(79,157,140,0.07)',border:'1px solid rgba(79,157,140,0.2)',borderRadius:6,padding:'10px 12px'}},
+            h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.green,marginBottom:6}},'✓ Do\'s'),
+            athlete.dos.split(/[,\n]/).map(function(d,i){d=d.trim();return d?h('div',{key:i,style:{fontSize:12,color:C.text,marginBottom:3,paddingLeft:8,borderLeft:'2px solid '+C.green}},d):null;})
+          ),
+          athlete.donts&&h('div',{style:{background:'rgba(239,68,68,0.07)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:6,padding:'10px 12px'}},
+            h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:'#ef4444',marginBottom:6}},'✕ Don\'ts'),
+            athlete.donts.split(/[,\n]/).map(function(d,i){d=d.trim();return d?h('div',{key:i,style:{fontSize:12,color:C.text,marginBottom:3,paddingLeft:8,borderLeft:'2px solid #ef4444'}},d):null;})
+          )
+        ),
+
+        // Injuries
+        athlete.injuries&&h('div',{style:{background:'rgba(239,68,68,0.07)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:6,padding:'10px 12px',marginBottom:14}},
+          h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:'#ef4444',marginBottom:4}},'⚠ Injuries / Limitations'),
+          h('div',{style:{fontSize:12,color:C.text,lineHeight:1.5}},athlete.injuries)
+        ),
+
+        // Upcoming
+        athlete.upcoming&&h('div',{style:{background:'rgba(201,168,76,0.07)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:6,padding:'10px 12px',marginBottom:14}},
+          h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.gold,marginBottom:4}},'✈ Upcoming'),
+          h('div',{style:{fontSize:12,color:C.text,lineHeight:1.5}},athlete.upcoming)
+        ),
+
+        // Coach notes
+        h('div',null,
+          h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
+            h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint}},'Coach Notes'),
+            !editing&&h('button',{className:'btn',onClick:function(){setEditing(true);setSaving(null);},style:{fontSize:10,color:C.accentHi,background:'none',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase'}},'✏ Edit')
+          ),
+          editing
+            ? h('div',null,
+                h('textarea',{value:noteContent,onChange:function(e){setNoteContent(e.target.value);},style:{width:'100%',minHeight:80,resize:'vertical',fontSize:12,lineHeight:1.5,marginBottom:8}}),
+                h('div',{style:{display:'flex',gap:8}},
+                  h('button',{className:'btn',onClick:saveNote,style:{background:C.accent,color:'#fff',padding:'5px 14px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3}},saving==='saving'?'Saving…':'Save'),
+                  h('button',{className:'btn',onClick:function(){setEditing(false);setNoteContent(athlete.coach_notes||'');setSaving(null);},style:{background:'none',color:C.textFaint,padding:'5px 14px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'Cancel'),
+                  saving==='saved'&&h('span',{style:{fontSize:11,color:C.green,alignSelf:'center'}},'✓ Saved'),
+                  saving==='error'&&h('span',{style:{fontSize:11,color:'#ef4444',alignSelf:'center'}},'⚠ Error')
+                )
+              )
+            : h('div',{style:{fontSize:12,color:C.textDim,lineHeight:1.6,whiteSpace:'pre-wrap'}},noteContent||h('em',{style:{color:C.textFaint}},'No coach notes yet.'))
+        )
+      )
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
   // DASHBOARD
   // ══════════════════════════════════════════════════════
 
@@ -651,9 +753,12 @@
     var er=useState(null); var error=er[0]; var setError=er[1];
     var ld=useState(true); var loading=ld[0]; var setLoading=ld[1];
     var lr=useState(null); var lastRefresh=lr[0]; var setLastRefresh=lr[1];
+    var sc=useState(null); var selectedClass=sc[0]; var setSelectedClass=sc[1];
+    var al=useState(null); var allAthletes=al[0]; var setAllAthletes=al[1];
+    var ar=useState(false); var athletesLoading=ar[0]; var setAthletesLoading=ar[1];
 
     var load=useCallback(function(){
-      setLoading(true); setError(null);
+      setLoading(true); setError(null); setSelectedClass(null);
       fetch(PROXY+'/today-classes')
         .then(function(r){if(!r.ok)throw new Error('Server error '+r.status);return r.json();})
         .then(function(data){setClasses(data.classes||[]);setDate(data.date);setLastRefresh(new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));})
@@ -661,7 +766,14 @@
         .then(function(){setLoading(false);});
     },[]);
 
-    useEffect(function(){load();},[load]);
+    // Load all athletes once on mount
+    useEffect(function(){
+      load();
+      fetch(PROXY+'/athletes')
+        .then(function(r){return r.json();})
+        .then(function(data){setAllAthletes(data.athletes||[]);})
+        .catch(function(){setAllAthletes([]);});
+    },[load]);
 
     var now=new Date(); var nowMins=now.getHours()*60+now.getMinutes();
     var classStatus=function(cls){
@@ -678,6 +790,64 @@
       return h12+':'+(m<10?'0':'')+m+' '+ampm;
     };
 
+    var handleSaveNote = function(rowNumber, newNote) {
+      setAllAthletes(function(prev) {
+        return prev.map(function(a) {
+          return a.row_number === rowNumber ? Object.assign({}, a, {coach_notes: newNote}) : a;
+        });
+      });
+    };
+
+    // Class detail view
+    if (selectedClass) {
+      var cls = selectedClass;
+      var status = classStatus(cls);
+      var totalRes = (cls.signed_in||0) + (cls.reserved||0);
+      var pct = cls.class_limit ? Math.round(totalRes/cls.class_limit*100) : 0;
+      var coaches = cls.coaches&&cls.coaches.map(function(c){return c.coach;}).join(', ')||'—';
+
+      // Match athletes from sheet to this class — since we don't have roster yet,
+      // show ALL athletes with notes as a coach prep view
+      var classAthletes = allAthletes ? allAthletes.filter(function(a) {
+        return a.goals||a.injuries||a.dos||a.donts||a.coach_notes||a.upcoming;
+      }) : [];
+
+      return h('div',{style:{display:'flex',flexDirection:'column',height:'100%',overflowY:'auto'}},
+        h('div',{style:{padding:'14px 20px',borderBottom:'1px solid '+C.line,flexShrink:0,display:'flex',alignItems:'center',gap:12}},
+          h('button',{className:'btn',onClick:function(){setSelectedClass(null);},style:{background:C.navy3,color:C.text,padding:'6px 10px',fontWeight:700,fontSize:11,borderRadius:3,border:'1px solid '+C.line}},'← Back'),
+          h('div',{style:{flex:1}},
+            h('div',{style:{fontSize:10,letterSpacing:'0.2em',color:status==='live'?'#22C55E':C.accentHi,fontWeight:700,textTransform:'uppercase',marginBottom:2}},status==='live'?'● Live Now':fmtTime(cls.start_time)),
+            h('div',{style:{fontSize:20,fontWeight:900,textTransform:'uppercase',letterSpacing:'0.02em'}},cls.name)
+          ),
+          h('div',{style:{display:'flex',gap:14,flexShrink:0}},
+            h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:22,fontWeight:900,color:C.accentHi,lineHeight:1}},cls.signed_in||0),h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Signed In')),
+            h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:22,fontWeight:900,color:C.textDim,lineHeight:1}},cls.reserved||0),h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Reserved'))
+          )
+        ),
+        h('div',{style:{padding:'16px 20px',flex:1,overflowY:'auto'}},
+          h('div',{style:{fontSize:11,color:C.textFaint,marginBottom:14}},
+            'Coach: ',h('span',{style:{color:C.text}},coaches),
+            ' · ',
+            h('span',{style:{color:C.accentHi}},totalRes),
+            '/'+cls.class_limit+' spots'
+          ),
+          classAthletes.length===0
+            ? h('div',{style:{textAlign:'center',padding:'40px 0',color:C.textFaint}},
+                h('div',{style:{fontSize:32,marginBottom:10}},'👥'),
+                h('div',{style:{fontSize:13,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:6}},'No athlete notes yet'),
+                h('div',{style:{fontSize:11,lineHeight:1.6}},'Add athletes via Slack #new-athletes or the Google Sheet to see their coaching cards here.')
+              )
+            : h('div',null,
+                h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:12}},classAthletes.length+' athletes with notes'),
+                classAthletes.map(function(a) {
+                  return h(AthleteCard, {key:a.row_number, athlete:a, onSaveNote:handleSaveNote});
+                })
+              )
+        )
+      );
+    }
+
+    // Class list view
     return h('div',{style:{display:'flex',flexDirection:'column',height:'100%',overflowY:'auto'}},
       h('div',{style:{padding:'16px 20px 0',borderBottom:'1px solid '+C.line,flexShrink:0,marginBottom:16}},
         h('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:12}},
@@ -696,7 +866,7 @@
         error&&h('div',{style:{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:7,padding:'14px 18px',color:'#ef4444',fontSize:13}},
           '⚠ '+error+' — ',h('span',{style:{textDecoration:'underline',cursor:'pointer'},onClick:load},'Retry')),
         !loading&&!error&&classes&&h('div',null,
-          h('div',{style:{fontSize:11,color:C.textFaint,marginBottom:14,letterSpacing:'0.05em'}},date+' · '+classes.length+' classes'),
+          h('div',{style:{fontSize:11,color:C.textFaint,marginBottom:14,letterSpacing:'0.05em'}},date+' · '+classes.length+' classes · tap a class to see athlete cards'),
           h('div',{style:{display:'flex',flexDirection:'column',gap:10}},
             classes.map(function(cls,i){
               var status=classStatus(cls);
@@ -704,7 +874,8 @@
               var pct=cls.class_limit?Math.round(totalRes/cls.class_limit*100):0;
               var coaches=cls.coaches&&cls.coaches.map(function(c){return c.coach;}).join(', ')||'—';
               var barColor=pct>=90?'#ef4444':pct>=70?C.gold:C.accentHi;
-              return h('div',{key:i,className:'card',style:{background:C.navy2,border:'1px solid '+(status==='live'?'rgba(34,197,94,0.3)':C.line),borderRadius:9,padding:'14px 18px',opacity:status==='done'?0.5:1}},
+              return h('div',{key:i,className:'card',style:{background:C.navy2,border:'1px solid '+(status==='live'?'rgba(34,197,94,0.3)':C.line),borderRadius:9,padding:'14px 18px',opacity:status==='done'?0.5:1,cursor:'pointer'},
+                onClick:function(){setSelectedClass(cls);}},
                 h('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}},
                   h('div',{style:{flex:1}},
                     h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:5}},
@@ -715,23 +886,19 @@
                     h('div',{style:{fontSize:13,color:C.textDim,marginBottom:6}},cls.name),
                     h('div',{style:{fontSize:11,color:C.textFaint}},'Coach: ',h('span',{style:{color:C.text}},coaches))
                   ),
-                  h('div',{style:{display:'flex',gap:16,flexShrink:0}},
+                  h('div',{style:{display:'flex',gap:16,flexShrink:0,alignItems:'center'}},
                     h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:24,fontWeight:900,color:C.accentHi,lineHeight:1}},cls.signed_in||0),h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Signed In')),
                     h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:24,fontWeight:900,color:C.textDim,lineHeight:1}},cls.reserved||0),h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Reserved')),
-                    cls.waitlisted>0&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:24,fontWeight:900,color:C.gold,lineHeight:1}},cls.waitlisted),h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Waitlist'))
+                    cls.waitlisted>0&&h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:24,fontWeight:900,color:C.gold,lineHeight:1}},cls.waitlisted),h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Waitlist')),
+                    h('div',{style:{color:C.textFaint,fontSize:16}},'›')
                   )
                 ),
                 cls.class_limit>0&&h('div',{style:{marginTop:10}},
                   h('div',{style:{display:'flex',justifyContent:'space-between',fontSize:9,color:C.textFaint,marginBottom:3}},h('span',null,totalRes+' / '+cls.class_limit+' spots'),h('span',null,pct+'% full')),
                   h('div',{style:{background:C.navy,borderRadius:2,height:3,overflow:'hidden'}},h('div',{style:{height:'100%',borderRadius:2,width:pct+'%',background:barColor,transition:'width 0.5s'}}))
-                ),
-                cls.is_full&&h('div',{style:{marginTop:7,fontSize:10,color:'#ef4444',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}},'Class Full')
+                )
               );
             })
-          ),
-          h('div',{style:{marginTop:24,padding:'16px',background:C.navy2,border:'1px solid '+C.line,borderRadius:9,textAlign:'center'}},
-            h('div',{style:{fontSize:11,color:C.textFaint,marginBottom:3}},'🔒 Athlete roster coming soon'),
-            h('div',{style:{fontSize:10,color:C.textFaint,lineHeight:1.5}},'Names, injuries & coaching notes will appear here once the Wodify roster endpoint is available.')
           )
         )
       )
@@ -747,7 +914,6 @@
   function App(){
     var ts=useState('dashboard'); var tab=ts[0]; var setTab=ts[1];
     return h('div',{style:{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,fontFamily:"'Glacial Indifference','Montserrat',sans-serif",color:C.text}},
-      // Nav
       h('div',{style:{background:C.navy,borderBottom:'1px solid '+C.line,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',height:50}},
         h('div',{style:{display:'flex',alignItems:'center',gap:9}},
           h('svg',{width:26,height:26,viewBox:'0 0 100 100'},
