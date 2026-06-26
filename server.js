@@ -54,7 +54,7 @@ const KNOWN_ANCHORS = [
   { date: "2026-06-18", id: 174326847 },
   { date: "2026-06-19", id: 174420392 },
   { date: "2026-06-22", id: 174558953 },
-  { date: "2026-06-24", id: 174652243 },
+  { date: "2026-06-26", id: 174846876 },  // ← add this line
 ];
 const anchorCache = {};
 KNOWN_ANCHORS.forEach(a => { anchorCache[a.date] = a.id; });
