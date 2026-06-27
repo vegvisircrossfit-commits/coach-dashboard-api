@@ -609,7 +609,7 @@ app.post("/athletes", async (req, res) => {
 });
 
 // Manual trigger to regenerate all AI summaries (run once to populate column N)
-app.post("/admin/regenerate-summaries", async (req, res) => {
+app.get("/admin/regenerate-summaries", async (req, res) => {
   res.json({ ok: true, message: "Regenerating summaries in background..." });
   try {
     const athletes = await getAllAthletes();
@@ -647,7 +647,7 @@ app.get("/roster/:classId", (req, res) => {
 });
 
 // Manual roster build trigger (for testing)
-app.post("/admin/build-roster", async (req, res) => {
+app.get("/admin/build-roster", async (req, res) => {
   res.json({ ok: true, message: "Building roster cache in background..." });
   buildRosterCache();
 });
