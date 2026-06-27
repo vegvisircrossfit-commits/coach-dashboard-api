@@ -832,10 +832,8 @@
       if (brief && typeof brief === 'object') {
         return Object.assign({}, a, {
           injuries: brief.injuries || a.injuries || '',
-          dos:      Array.isArray(brief.dos) ? brief.dos.join('
-') : (a.dos||''),
-          donts:    Array.isArray(brief.donts) ? brief.donts.join('
-') : (a.donts||''),
+          dos:      Array.isArray(brief.dos) ? brief.dos.join(', ') : (a.dos||''),
+          donts:    Array.isArray(brief.donts) ? brief.donts.join(', ') : (a.donts||''),
           upcoming: brief.upcoming || a.upcoming || '',
         });
       }
