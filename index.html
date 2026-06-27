@@ -759,6 +759,10 @@
     var rl=useState(false); var rosterLoading=rl[0]; var setRosterLoading=rl[1];
     var rc=useState(null); var rosterBuiltAt=rc[0]; var setRosterBuiltAt=rc[1];
     var rf=useState(false); var rosterFallback=rf[0]; var setRosterFallback=rf[1];
+    var ss2=useState(false); var showSettings=ss2[0]; var setShowSettings=ss2[1];
+    var ai=useState(''); var anchorInput=ai[0]; var setAnchorInput=ai[1];
+    var ad=useState(''); var anchorDate=ad[0]; var setAnchorDate=ad[1];
+    var as2=useState(null); var anchorStatus=as2[0]; var setAnchorStatus=as2[1];
 
     var load=useCallback(function(){
       setLoading(true); setError(null); setSelectedClass(null); setRosterAthletes(null);
@@ -827,13 +831,41 @@
         .then(function() { setRosterLoading(false); });
     };
 
+    var saveAnchor = function() {
+      var id = parseInt(anchorInput.trim());
+      var date = anchorDate.trim();
+      if (!id || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        setAnchorStatus({type:'error', msg:'Enter a valid class ID and date (YYYY-MM-DD)'});
+        return;
+      }
+      setAnchorStatus({type:'saving', msg:'Saving anchor…'});
+      fetch(PROXY+'/admin/update-anchor', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({date:date, id:id})
+      })
+      .then(function(r){return r.json();})
+      .then(function(data){
+        if(data.ok) {
+          setAnchorStatus({type:'success', msg:'Anchor saved for '+date+' → ID '+id+'. Refreshing classes…'});
+          setAnchorInput(''); setAnchorDate('');
+          setTimeout(function(){load(); setShowSettings(false); setAnchorStatus(null);}, 1500);
+        } else {
+          setAnchorStatus({type:'error', msg:data.error||'Save failed'});
+        }
+      })
+      .catch(function(){setAnchorStatus({type:'error', msg:'Network error'});});
+    };
+
     var enrichAthlete = function(a) {
       var brief = a.coaching_brief;
       if (brief && typeof brief === 'object') {
         return Object.assign({}, a, {
           injuries: brief.injuries || a.injuries || '',
-          dos:      Array.isArray(brief.dos) ? brief.dos.join(', ') : (a.dos||''),
-          donts:    Array.isArray(brief.donts) ? brief.donts.join(', ') : (a.donts||''),
+          dos:      Array.isArray(brief.dos) ? brief.dos.join('
+') : (a.dos||''),
+          donts:    Array.isArray(brief.donts) ? brief.donts.join('
+') : (a.donts||''),
           upcoming: brief.upcoming || a.upcoming || '',
         });
       }
@@ -886,7 +918,7 @@
               ? h('div',{style:{textAlign:'center',padding:'40px 0',color:C.textFaint}},
                   h('div',{style:{fontSize:32,marginBottom:10}},'👥'),
                   h('div',{style:{fontSize:13,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:6}},rosterAthletes?'No athletes with notes in this class':'No athlete notes yet'),
-                  h('div',{style:{fontSize:11,lineHeight:1.6,maxWidth:300,margin:'0 auto'}},rosterAthletes?'Athletes in this class have no notes yet.':'Add athletes via Slack #new-athletes to see coaching cards here.')
+                  h('div',{style:{fontSize:11,lineHeight:1.6,maxWidth:300,margin:'0 auto'}},rosterAthletes?'Athletes in this class don't have notes yet.':'Add athletes via Slack #new-athletes to see coaching cards here.')
                 )
               : h('div',null,
                   classAthletes&&h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:12}},
@@ -909,7 +941,34 @@
           ),
           h('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5}},
             lastRefresh&&h('div',{style:{fontSize:10,color:C.textFaint,letterSpacing:'0.1em'}},'Updated '+lastRefresh),
-            h('button',{className:'btn',onClick:load,style:{background:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'⟳ Refresh')
+            h('div',{style:{display:'flex',gap:6}},
+              h('button',{className:'btn',onClick:function(){setShowSettings(function(p){return !p;});setAnchorStatus(null);},style:{background:showSettings?C.accent:C.navy3,color:showSettings?'#fff':C.textFaint,padding:'6px 10px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'⚙'),
+              h('button',{className:'btn',onClick:load,style:{background:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'⟳ Refresh')
+            )
+          )
+        ),
+        showSettings&&h('div',{className:'fade-in',style:{margin:'0 0 16px',padding:'14px 16px',background:C.navy2,border:'1px solid '+C.line,borderRadius:8}},
+          h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:C.textFaint,marginBottom:10}},'Update Search Anchor'),
+          h('div',{style:{fontSize:11,color:C.textFaint,marginBottom:10,lineHeight:1.5}},
+            'When classes don't appear, grab a class URL from Wodify admin and paste the ClassId and date here.'),
+          h('div',{style:{display:'flex',gap:8,marginBottom:8,flexWrap:'wrap'}},
+            h('div',{style:{flex:1,minWidth:120}},
+              h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Date (YYYY-MM-DD)'),
+              h('input',{value:anchorDate,onChange:function(e){setAnchorDate(e.target.value);},placeholder:'2026-06-30',style:{width:'100%',fontSize:12}})
+            ),
+            h('div',{style:{flex:1,minWidth:120}},
+              h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Class ID from Wodify URL'),
+              h('input',{value:anchorInput,onChange:function(e){setAnchorInput(e.target.value);},placeholder:'174894836',style:{width:'100%',fontSize:12}})
+            ),
+            h('div',{style:{display:'flex',alignItems:'flex-end'}},
+              h('button',{className:'btn',onClick:saveAnchor,style:{background:C.accent,color:'#fff',padding:'8px 14px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,whiteSpace:'nowrap'}},'Save Anchor')
+            )
+          ),
+          anchorStatus&&h('div',{style:{fontSize:11,color:anchorStatus.type==='success'?C.green:anchorStatus.type==='error'?'#ef4444':C.textFaint,marginTop:4}},anchorStatus.msg),
+          h('div',{style:{marginTop:10,padding:'10px 12px',background:C.navy,borderRadius:5,fontSize:10,color:C.textFaint,lineHeight:1.6}},
+            '💡 How to get the Class ID: In Wodify admin, go to Schedule → click any class → copy the ',
+            h('span',{style:{color:C.text,fontFamily:'monospace'}},'ClassId=XXXXXXX'),
+            ' number from the URL'
           )
         )
       ),
