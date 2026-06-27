@@ -50,37 +50,59 @@ const RECURRING_IDS = new Set([
   205659, 195631, 195633, 254489, 195634, 195635, 522818,
   293074, 429300, 342890, 358767, 407780, 272141, 559450, 561511
 ]);
-const ANCHOR_RECURRING_ID = 205659;
-const KNOWN_ANCHORS = [
-  { date: "2026-06-18", id: 174326847 },
-  { date: "2026-06-19", id: 174420392 },
-  { date: "2026-06-22", id: 174558953 },
-  { date: "2026-06-26", id: 174846876 },
-];
-const anchorCache = {};
-KNOWN_ANCHORS.forEach(a => { anchorCache[a.date] = a.id; });
 
-async function findAnchorId(today) {
-  if (anchorCache[today]) return anchorCache[today];
+// Known anchors — any class from RECURRING_IDS works, weekday or weekend
+// Add a new entry whenever the search starts missing (grab ClassId from Wodify admin URL)
+const KNOWN_ANCHORS = [
+  { date: "2026-06-22", id: 174558953, recurring_id: 205659 }, // Mon 5AM
+  { date: "2026-06-23", id: 174636236, recurring_id: 205659 }, // Tue 5AM
+  { date: "2026-06-24", id: 174704892, recurring_id: 205659 }, // Wed 5AM
+  { date: "2026-06-25", id: 174778926, recurring_id: 205659 }, // Thu 5AM
+  { date: "2026-06-26", id: 174846876, recurring_id: 205659 }, // Fri 5AM
+  { date: "2026-06-27", id: 174894836, recurring_id: 254489 }, // Sat 9AM
+];
+
+const anchorCache = {};
+KNOWN_ANCHORS.forEach(a => { anchorCache[a.date] = a; });
+
+async function findTodaysClasses(today) {
+  // Pick closest anchor on or before today
   const sorted = KNOWN_ANCHORS.slice().sort((a, b) => a.date.localeCompare(b.date));
   let best = sorted[sorted.length - 1];
   for (const a of sorted) { if (a.date <= today) best = a; }
+
   const daysDiff = Math.round((new Date(today) - new Date(best.date)) / 86400000);
-  let lo = best.id + daysDiff * 40000;
-  let hi = best.id + daysDiff * 100000 + 300000;
-  for (let i = 0; i < 30; i++) {
-    const mid = Math.floor((lo + hi) / 2);
-    try {
-      const data = await wodifyGet(API_BASE, `/classes/${mid}`);
-      if (!data.start_date) { lo = mid + 1; continue; }
-      if (data.start_date === today && data.recurring_class_id === ANCHOR_RECURRING_ID) {
-        anchorCache[today] = mid; return mid;
-      }
-      if (data.start_date < today) lo = mid + 1; else hi = mid - 1;
-    } catch (e) { lo = mid + 1; }
+  const estimated = best.id + daysDiff * 10000;
+  const WINDOW = 200;
+
+  console.log(`Searching for ${today} near ID ${estimated} (${daysDiff} days from ${best.date})`);
+
+  const ids = Array.from({ length: WINDOW * 2 + 1 }, (_, i) => estimated - WINDOW + i);
+
+  const results = await Promise.all(
+    ids.map(id =>
+      wodifyGet(API_BASE, `/classes/${id}`)
+        .then(data => {
+          if (data.start_date === today && !data.is_cancelled && RECURRING_IDS.has(data.recurring_class_id)) return data;
+          return null;
+        })
+        .catch(() => null)
+    )
+  );
+
+  const found = results
+    .filter(Boolean)
+    .filter((c, i, arr) => arr.findIndex(x => x.recurring_class_id === c.recurring_class_id) === i)
+    .sort((a, b) => a.start_time > b.start_time ? 1 : -1);
+
+  // Auto-cache the first found class as a new anchor
+  if (found.length > 0 && !anchorCache[today]) {
+    const first = found[0];
+    anchorCache[today] = { date: today, id: first.id, recurring_id: first.recurring_class_id };
+    console.log(`Auto-cached anchor: ${today} → ${first.id} (${first.name})`);
   }
-  const mid = Math.floor((lo + hi) / 2);
-  anchorCache[today] = mid; return mid;
+
+  return found;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -609,7 +631,7 @@ app.post("/athletes", async (req, res) => {
 });
 
 // Manual trigger to regenerate all AI summaries (run once to populate column N)
-app.get("/admin/regenerate-summaries", async (req, res) => {
+app.post("/admin/regenerate-summaries", async (req, res) => {
   res.json({ ok: true, message: "Regenerating summaries in background..." });
   try {
     const athletes = await getAllAthletes();
@@ -646,8 +668,29 @@ app.get("/roster/:classId", (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Update anchor from dashboard settings panel
+app.post("/admin/update-anchor", (req, res) => {
+  try {
+    const { date, id } = req.body;
+    if (!date || !id || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: "Invalid date or id" });
+    }
+    const classId = parseInt(id);
+    if (isNaN(classId)) return res.status(400).json({ error: "Invalid class ID" });
+    // Add to in-memory anchor cache
+    anchorCache[date] = { date, id: classId, recurring_id: null };
+    // Also push to KNOWN_ANCHORS so it persists for this session
+    KNOWN_ANCHORS.push({ date, id: classId, recurring_id: null });
+    KNOWN_ANCHORS.sort((a, b) => a.date.localeCompare(b.date));
+    console.log(`[Anchor] Updated: ${date} → ${classId}`);
+    res.json({ ok: true, date, id: classId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Manual roster build trigger (for testing)
-app.get("/admin/build-roster", async (req, res) => {
+app.post("/admin/build-roster", async (req, res) => {
   res.json({ ok: true, message: "Building roster cache in background..." });
   buildRosterCache();
 });
@@ -656,22 +699,7 @@ app.get("/admin/build-roster", async (req, res) => {
 app.get("/today-classes", async (req, res) => {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
   try {
-    const anchorId = await findAnchorId(today);
-    const WINDOW = 50;
-    const ids = Array.from({ length: WINDOW * 2 + 1 }, (_, i) => anchorId - WINDOW + i);
-    const results = await Promise.all(
-      ids.map(id =>
-        wodifyGet(API_BASE, `/classes/${id}`)
-          .then(data => {
-            if (data.start_date === today && !data.is_cancelled && RECURRING_IDS.has(data.recurring_class_id)) return data;
-            return null;
-          }).catch(() => null)
-      )
-    );
-    const found = results
-      .filter(Boolean)
-      .filter((c, i, arr) => arr.findIndex(x => x.recurring_class_id === c.recurring_class_id) === i)
-      .sort((a, b) => a.start_time > b.start_time ? 1 : -1);
+    const found = await findTodaysClasses(today);
     res.json({ classes: found, date: today });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
