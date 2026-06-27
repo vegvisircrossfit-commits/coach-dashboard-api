@@ -916,7 +916,7 @@
               ? h('div',{style:{textAlign:'center',padding:'40px 0',color:C.textFaint}},
                   h('div',{style:{fontSize:32,marginBottom:10}},'👥'),
                   h('div',{style:{fontSize:13,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:6}},rosterAthletes?'No athletes with notes in this class':'No athlete notes yet'),
-                  h('div',{style:{fontSize:11,lineHeight:1.6,maxWidth:300,margin:'0 auto'}},rosterAthletes?'Athletes in this class don't have notes yet.':'Add athletes via Slack #new-athletes to see coaching cards here.')
+                  h('div',{style:{fontSize:11,lineHeight:1.6,maxWidth:300,margin:'0 auto'}},rosterAthletes?'Athletes in this class have no notes yet.':'Add athletes via Slack #new-athletes to see coaching cards here.')
                 )
               : h('div',null,
                   classAthletes&&h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:12}},
@@ -948,7 +948,7 @@
         showSettings&&h('div',{className:'fade-in',style:{margin:'0 0 16px',padding:'14px 16px',background:C.navy2,border:'1px solid '+C.line,borderRadius:8}},
           h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:C.textFaint,marginBottom:10}},'Update Search Anchor'),
           h('div',{style:{fontSize:11,color:C.textFaint,marginBottom:10,lineHeight:1.5}},
-            'When classes don't appear, grab a class URL from Wodify admin and paste the ClassId and date here.'),
+            'When classes do not appear, grab a class URL from Wodify admin and paste the ClassId and date here.'),
           h('div',{style:{display:'flex',gap:8,marginBottom:8,flexWrap:'wrap'}},
             h('div',{style:{flex:1,minWidth:120}},
               h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Date (YYYY-MM-DD)'),
