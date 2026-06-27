@@ -755,10 +755,13 @@
     var lr=useState(null); var lastRefresh=lr[0]; var setLastRefresh=lr[1];
     var sc=useState(null); var selectedClass=sc[0]; var setSelectedClass=sc[1];
     var al=useState(null); var allAthletes=al[0]; var setAllAthletes=al[1];
-    var ar=useState(false); var athletesLoading=ar[0]; var setAthletesLoading=ar[1];
+    var ra=useState(null); var rosterAthletes=ra[0]; var setRosterAthletes=ra[1];
+    var rl=useState(false); var rosterLoading=rl[0]; var setRosterLoading=rl[1];
+    var rc=useState(null); var rosterBuiltAt=rc[0]; var setRosterBuiltAt=rc[1];
+    var rf=useState(false); var rosterFallback=rf[0]; var setRosterFallback=rf[1];
 
     var load=useCallback(function(){
-      setLoading(true); setError(null); setSelectedClass(null);
+      setLoading(true); setError(null); setSelectedClass(null); setRosterAthletes(null);
       fetch(PROXY+'/today-classes')
         .then(function(r){if(!r.ok)throw new Error('Server error '+r.status);return r.json();})
         .then(function(data){setClasses(data.classes||[]);setDate(data.date);setLastRefresh(new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));})
@@ -792,10 +795,51 @@
 
     var handleSaveNote = function(rowNumber, newNote) {
       setAllAthletes(function(prev) {
-        return prev.map(function(a) {
+        return (prev||[]).map(function(a) {
           return a.row_number === rowNumber ? Object.assign({}, a, {coach_notes: newNote}) : a;
         });
       });
+    };
+
+    // When a class is tapped, try roster cache first
+    var selectClass = function(cls) {
+      setSelectedClass(cls);
+      setRosterAthletes(null);
+      setRosterFallback(false);
+      setRosterBuiltAt(null);
+      setRosterLoading(true);
+      fetch(PROXY+'/roster/'+cls.id)
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (data.error) {
+            setRosterFallback(true);
+          } else {
+            var athletes = (data.athletes||[]).map(function(a) {
+              var brief = a.coaching_brief;
+              if (brief && typeof brief === 'string') { try { brief = JSON.parse(brief); } catch(e) {} }
+              return Object.assign({}, a, { coaching_brief: brief });
+            });
+            setRosterAthletes(athletes);
+            setRosterBuiltAt(data.cache_built_at||null);
+          }
+        })
+        .catch(function() { setRosterFallback(true); })
+        .then(function() { setRosterLoading(false); });
+    };
+
+    var enrichAthlete = function(a) {
+      var brief = a.coaching_brief;
+      if (brief && typeof brief === 'object') {
+        return Object.assign({}, a, {
+          injuries: brief.injuries || a.injuries || '',
+          dos:      Array.isArray(brief.dos) ? brief.dos.join('
+') : (a.dos||''),
+          donts:    Array.isArray(brief.donts) ? brief.donts.join('
+') : (a.donts||''),
+          upcoming: brief.upcoming || a.upcoming || '',
+        });
+      }
+      return a;
     };
 
     // Class detail view
@@ -803,18 +847,22 @@
       var cls = selectedClass;
       var status = classStatus(cls);
       var totalRes = (cls.signed_in||0) + (cls.reserved||0);
-      var pct = cls.class_limit ? Math.round(totalRes/cls.class_limit*100) : 0;
       var coaches = cls.coaches&&cls.coaches.map(function(c){return c.coach;}).join(', ')||'—';
 
-      // Match athletes from sheet to this class — since we don't have roster yet,
-      // show ALL athletes with notes as a coach prep view
-      var classAthletes = allAthletes ? allAthletes.filter(function(a) {
-        return a.goals||a.injuries||a.dos||a.donts||a.coach_notes||a.upcoming;
-      }) : [];
+      var classAthletes;
+      if (rosterLoading) {
+        classAthletes = null;
+      } else if (rosterAthletes) {
+        classAthletes = rosterAthletes.filter(function(a){ return a.has_notes; }).map(enrichAthlete);
+      } else {
+        classAthletes = (allAthletes||[]).filter(function(a) {
+          return a.goals||a.injuries||a.dos||a.donts||a.coach_notes||a.upcoming;
+        });
+      }
 
       return h('div',{style:{display:'flex',flexDirection:'column',height:'100%',overflowY:'auto'}},
         h('div',{style:{padding:'14px 20px',borderBottom:'1px solid '+C.line,flexShrink:0,display:'flex',alignItems:'center',gap:12}},
-          h('button',{className:'btn',onClick:function(){setSelectedClass(null);},style:{background:C.navy3,color:C.text,padding:'6px 10px',fontWeight:700,fontSize:11,borderRadius:3,border:'1px solid '+C.line}},'← Back'),
+          h('button',{className:'btn',onClick:function(){setSelectedClass(null);setRosterAthletes(null);},style:{background:C.navy3,color:C.text,padding:'6px 10px',fontWeight:700,fontSize:11,borderRadius:3,border:'1px solid '+C.line}},'← Back'),
           h('div',{style:{flex:1}},
             h('div',{style:{fontSize:10,letterSpacing:'0.2em',color:status==='live'?'#22C55E':C.accentHi,fontWeight:700,textTransform:'uppercase',marginBottom:2}},status==='live'?'● Live Now':fmtTime(cls.start_time)),
             h('div',{style:{fontSize:20,fontWeight:900,textTransform:'uppercase',letterSpacing:'0.02em'}},cls.name)
@@ -825,24 +873,30 @@
           )
         ),
         h('div',{style:{padding:'16px 20px',flex:1,overflowY:'auto'}},
-          h('div',{style:{fontSize:11,color:C.textFaint,marginBottom:14}},
-            'Coach: ',h('span',{style:{color:C.text}},coaches),
-            ' · ',
-            h('span',{style:{color:C.accentHi}},totalRes),
-            '/'+cls.class_limit+' spots'
+          h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}},
+            h('div',{style:{fontSize:11,color:C.textFaint}},
+              'Coach: ',h('span',{style:{color:C.text}},coaches),
+              ' · ',h('span',{style:{color:C.accentHi}},totalRes),'/'+cls.class_limit+' spots'),
+            rosterBuiltAt&&!rosterFallback&&h('div',{style:{fontSize:9,color:C.textFaint}},
+              '🕐 '+new Date(rosterBuiltAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}))
           ),
-          classAthletes.length===0
-            ? h('div',{style:{textAlign:'center',padding:'40px 0',color:C.textFaint}},
-                h('div',{style:{fontSize:32,marginBottom:10}},'👥'),
-                h('div',{style:{fontSize:13,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:6}},'No athlete notes yet'),
-                h('div',{style:{fontSize:11,lineHeight:1.6}},'Add athletes via Slack #new-athletes or the Google Sheet to see their coaching cards here.')
-              )
-            : h('div',null,
-                h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:12}},classAthletes.length+' athletes with notes'),
-                classAthletes.map(function(a) {
-                  return h(AthleteCard, {key:a.row_number, athlete:a, onSaveNote:handleSaveNote});
-                })
-              )
+          rosterFallback&&h('div',{style:{background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:6,padding:'10px 14px',marginBottom:14,fontSize:11,color:C.gold}},
+            '⏳ Roster cache not built yet — showing all athletes with notes. Builds automatically 15 min before each class.'),
+          rosterLoading
+            ? h('div',{style:{textAlign:'center',padding:'40px',color:C.textFaint,letterSpacing:'0.15em',textTransform:'uppercase',fontSize:11}},'Loading roster…')
+            : classAthletes&&classAthletes.length===0
+              ? h('div',{style:{textAlign:'center',padding:'40px 0',color:C.textFaint}},
+                  h('div',{style:{fontSize:32,marginBottom:10}},'👥'),
+                  h('div',{style:{fontSize:13,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:6}},rosterAthletes?'No athletes with notes in this class':'No athlete notes yet'),
+                  h('div',{style:{fontSize:11,lineHeight:1.6,maxWidth:300,margin:'0 auto'}},rosterAthletes?'Athletes in this class don't have notes yet.':'Add athletes via Slack #new-athletes to see coaching cards here.')
+                )
+              : h('div',null,
+                  classAthletes&&h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:12}},
+                    (rosterAthletes?'':'All ')+classAthletes.length+' athlete'+(classAthletes.length===1?'':'s')+(rosterAthletes?' in this class':' with notes')),
+                  (classAthletes||[]).map(function(a) {
+                    return h(AthleteCard, {key:a.row_number||a.athlete, athlete:a, onSaveNote:handleSaveNote});
+                  })
+                )
         )
       );
     }
@@ -875,7 +929,7 @@
               var coaches=cls.coaches&&cls.coaches.map(function(c){return c.coach;}).join(', ')||'—';
               var barColor=pct>=90?'#ef4444':pct>=70?C.gold:C.accentHi;
               return h('div',{key:i,className:'card',style:{background:C.navy2,border:'1px solid '+(status==='live'?'rgba(34,197,94,0.3)':C.line),borderRadius:9,padding:'14px 18px',opacity:status==='done'?0.5:1,cursor:'pointer'},
-                onClick:function(){setSelectedClass(cls);}},
+                onClick:function(){selectClass(cls);}},
                 h('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}},
                   h('div',{style:{flex:1}},
                     h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:5}},
