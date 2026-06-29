@@ -620,4 +620,68 @@ app.get("/wodify/*", async (req, res) => {
   res.status(500).json({ error: "Both endpoints failed" });
 });
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PLAYBOOK — GitHub-backed shared storage
+// ══════════════════════════════════════════════════════════════════════════════
+
+const GITHUB_TOKEN    = process.env.GITHUB_TOKEN;
+const GITHUB_REPO     = "vegvisircrossfit-commits/coach-dashboard-api";
+const PLAYBOOK_FILE   = "playbook.json";
+const PLAYBOOK_PIN    = process.env.PLAYBOOK_PIN || "vegvisir2026";
+
+async function getPlaybookFromGitHub() {
+  const resp = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${PLAYBOOK_FILE}`, {
+    headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: "application/vnd.github+json" }
+  });
+  if (!resp.ok) throw new Error(`GitHub fetch failed: ${resp.status}`);
+  const data = await resp.json();
+  const content = Buffer.from(data.content, "base64").toString("utf8");
+  return { playbook: JSON.parse(content), sha: data.sha };
+}
+
+async function savePlaybookToGitHub(playbook, sha) {
+  const content = Buffer.from(JSON.stringify(playbook, null, 2)).toString("base64");
+  const resp = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${PLAYBOOK_FILE}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: "application/vnd.github+json", "Content-Type": "application/json" },
+    body: JSON.stringify({ message: "Update playbook", content, sha })
+  });
+  if (!resp.ok) { const e = await resp.json(); throw new Error(`GitHub save failed: ${e.message}`); }
+  return resp.json();
+}
+
+app.get("/playbook", async (req, res) => {
+  try {
+    const { playbook } = await getPlaybookFromGitHub();
+    res.json(playbook);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post("/playbook/sop", async (req, res) => {
+  const { pin, key, sop } = req.body;
+  if (pin !== PLAYBOOK_PIN) return res.status(403).json({ error: "Invalid PIN" });
+  if (!key || !sop) return res.status(400).json({ error: "Missing key or sop" });
+  try {
+    const { playbook, sha } = await getPlaybookFromGitHub();
+    playbook.sops = playbook.sops || {};
+    playbook.sops[key] = sop;
+    playbook.lastUpdated = new Date().toISOString();
+    await savePlaybookToGitHub(playbook, sha);
+    res.json({ ok: true, key });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete("/playbook/sop/:key", async (req, res) => {
+  const { pin } = req.body;
+  if (pin !== PLAYBOOK_PIN) return res.status(403).json({ error: "Invalid PIN" });
+  try {
+    const { playbook, sha } = await getPlaybookFromGitHub();
+    delete playbook.sops[req.params.key];
+    playbook.lastUpdated = new Date().toISOString();
+    await savePlaybookToGitHub(playbook, sha);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); });
