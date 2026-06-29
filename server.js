@@ -692,18 +692,17 @@ app.delete("/playbook/sop/:key", async (req, res) => {
 const WODS_FILE = "wods.json";
 
 async function getWodsFromGitHub() {
-  const resp = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${WODS_FILE}`, {
-    headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: "application/vnd.github+json" }
+  // Use raw content URL to avoid GitHub API's base64 size limits
+  const resp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/${WODS_FILE}`, {
+    headers: { Authorization: `Bearer ${GITHUB_TOKEN}` }
   });
   if (!resp.ok) throw new Error(`GitHub WODs fetch failed: ${resp.status}`);
-  const data = await resp.json();
-  const content = Buffer.from(data.content, "base64").toString("utf8");
-  return { wods: JSON.parse(content), sha: data.sha };
+  return resp.json();
 }
 
 app.get("/wods", async (req, res) => {
   try {
-    const { wods } = await getWodsFromGitHub();
+    const wods = await getWodsFromGitHub();
     res.json(wods);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
