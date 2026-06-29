@@ -1,0 +1,165 @@
+{
+  "sops": {
+    "sop_temp_001": {
+      "title": "Gym Temperature Management",
+      "flow": {
+        "category": "Maintenance",
+        "summary": "Keep gym between 74-76°F using hallway thermostat.",
+        "steps": [
+          {"id":"1","type":"decision","text":"Is gym temperature between 74-76°F?","yes":"2","no":"3"},
+          {"id":"2","type":"end","text":"No action needed.","next":null},
+          {"id":"3","type":"action","text":"Go to thermostat in hallway by the bathrooms. Press down arrow and set a temporary hold until it reaches 74-76°F.","next":"4"},
+          {"id":"4","type":"decision","text":"Did the gym cool down to the correct range?","yes":"5","no":"6"},
+          {"id":"5","type":"end","text":"Done — temperature is in range.","next":null},
+          {"id":"6","type":"action","text":"Contact management through Supplies & Repairs on Slack. They will resolve it as quickly as possible.","next":null}
+        ]
+      },
+      "source": "text",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    },
+    "sop_nsi_001": {
+      "title": "No Sweat Intro (NSI) — Sales Floor SOP",
+      "flow": {
+        "category": "Sales & Member Ops",
+        "summary": "Step-by-step process for conducting a No Sweat Intro with a prospect.",
+        "steps": [
+          {"id":"1","type":"action","text":"Greet them by name at the door. Ask: 'Hey, what brings you in today?'","next":"2"},
+          {"id":"2","type":"decision","text":"Did they give a clear goal or a vague answer?","yes":"3","no":"4"},
+          {"id":"3","type":"action","text":"Keep asking 'Why?' until you reach the real pain point. Share a member story with the same pain point.","next":"5"},
+          {"id":"4","type":"action","text":"Follow up with 'Why?' and keep digging until you find the deeper motivation.","next":"3"},
+          {"id":"5","type":"action","text":"Explain CrossFit if asked. Focus on community, coaching, and results. Tour the facility.","next":"6"},
+          {"id":"6","type":"action","text":"Present membership options. Always present highest tier first. Ask: 'Which of these feels like the best fit?'","next":"7"},
+          {"id":"7","type":"decision","text":"Did they sign up?","yes":"8","no":"9"},
+          {"id":"8","type":"end","text":"Complete intake, schedule first session, introduce to Wodify app.","next":null},
+          {"id":"9","type":"action","text":"Handle objection. Address concern, offer a trial class, or schedule a follow-up. Add to Lead Machine.","next":null}
+        ]
+      },
+      "source": "text",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    },
+    "sop_opening_001": {
+      "title": "Gym Opening Procedure",
+      "flow": {
+        "category": "Gym Overview",
+        "summary": "Steps to open the gym each morning before the first class.",
+        "steps": [
+          {"id":"1","type":"action","text":"Arrive at least 15 minutes before class. Use Kisi app to unlock the front gate (code: 3 and 5 simultaneously then 1).","next":"2"},
+          {"id":"2","type":"action","text":"Turn on all lights. Check gym temperature — should be 74-76°F.","next":"3"},
+          {"id":"3","type":"action","text":"Turn on music via Sonos app. Set to appropriate volume for pre-class energy.","next":"4"},
+          {"id":"4","type":"action","text":"Check equipment is set up for the day's workout. Verify whiteboard has the WOD written.","next":"5"},
+          {"id":"5","type":"action","text":"Check bathrooms — paper towels, soap, toilet paper stocked. Spray and wipe down surfaces if needed.","next":"6"},
+          {"id":"6","type":"action","text":"Open Wodify on your device. Confirm class roster and any special notes for athletes.","next":"7"},
+          {"id":"7","type":"end","text":"Gym is open and ready. Greet athletes as they arrive.","next":null}
+        ]
+      },
+      "source": "text",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    },
+    "sop_broken_equip_001": {
+      "title": "Broken Equipment Reporting",
+      "flow": {
+        "category": "Equipment & Ordering",
+        "summary": "What to do when equipment is damaged or broken.",
+        "steps": [
+          {"id":"1","type":"decision","text":"Is the equipment a safety hazard (sharp edges, unstable, could injure someone)?","yes":"2","no":"3"},
+          {"id":"2","type":"action","text":"Remove from gym floor immediately. Place in storage or mark clearly as OUT OF SERVICE.","next":"4"},
+          {"id":"3","type":"action","text":"Tag the item so other coaches know it is broken. Do not remove from floor if still usable.","next":"4"},
+          {"id":"4","type":"action","text":"Post in Slack #supplies-and-repairs with: item name, description of damage, photo if possible.","next":"5"},
+          {"id":"5","type":"end","text":"Management will arrange repair or replacement. Check back if not resolved within one week.","next":null}
+        ]
+      },
+      "source": "text",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    },
+    "sop_trash_001": {
+      "title": "Trash Management",
+      "flow": {
+        "category": "Cleaning & Supplies",
+        "summary": "Daily trash takeout and scheduled trash day procedures.",
+        "steps": [
+          {"id":"1","type":"decision","text":"Is the trash bin more than half full or does it smell?","yes":"2","no":"3"},
+          {"id":"2","type":"action","text":"Replace trash bag. Tie off full bag and take to dumpster outside.","next":"4"},
+          {"id":"3","type":"action","text":"Check again after next class. Do not leave overfull bins overnight.","next":null},
+          {"id":"4","type":"decision","text":"Is today trash pickup day?","yes":"5","no":"6"},
+          {"id":"5","type":"action","text":"Bring dumpster to the curb before 7AM. Bring back in after pickup.","next":null},
+          {"id":"6","type":"end","text":"Trash replaced. No further action needed.","next":null}
+        ]
+      },
+      "source": "text",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    },
+    "sop_supplies_001": {
+      "title": "Consumable Restocking",
+      "flow": {
+        "category": "Cleaning & Supplies",
+        "summary": "How to restock soap, paper towels, snacks, and other consumables.",
+        "steps": [
+          {"id":"1","type":"decision","text":"Is the item completely out or running low (less than 20% remaining)?","yes":"2","no":"6"},
+          {"id":"2","type":"decision","text":"Is there backup stock in the supply closet?","yes":"3","no":"4"},
+          {"id":"3","type":"action","text":"Restock from supply closet. Note what was used so management can reorder.","next":"6"},
+          {"id":"4","type":"action","text":"Post in Slack #supplies-and-repairs: item name, quantity needed, urgency level.","next":"5"},
+          {"id":"5","type":"action","text":"For snack fridge (apples, oranges, drinks): order through H-E-B or Element/O2 per management SOP.","next":"6"},
+          {"id":"6","type":"end","text":"Item is stocked or order has been placed.","next":null}
+        ]
+      },
+      "source": "text",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    },
+    "sop_gate_001": {
+      "title": "Gate and Door Protocols",
+      "flow": {
+        "category": "Gym Overview",
+        "summary": "How to open and close the front gate and gym doors.",
+        "steps": [
+          {"id":"1","type":"decision","text":"Are you opening or closing?","yes":"2","no":"5"},
+          {"id":"2","type":"action","text":"OPENING: Use Kisi app to unlock gate. Code is 3 and 5 simultaneously then 1.","next":"3"},
+          {"id":"3","type":"decision","text":"Is the gate stuck or not responding?","yes":"4","no":"8"},
+          {"id":"4","type":"action","text":"Try manual keypad. If still not working, post in Slack #supplies-and-repairs immediately.","next":null},
+          {"id":"5","type":"action","text":"CLOSING: Ensure all athletes have left. Check bathrooms and back area.","next":"6"},
+          {"id":"6","type":"action","text":"Turn off all lights. Turn off Sonos. Set thermostat to energy save mode.","next":"7"},
+          {"id":"7","type":"action","text":"Lock front door. Lock gate via Kisi app. Confirm locked before leaving.","next":null},
+          {"id":"8","type":"end","text":"Gate is open. Proceed with opening checklist.","next":null}
+        ]
+      },
+      "source": "text",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    },
+    "sop_resources_001": {
+      "title": "Resource Links — All Staff",
+      "flow": {
+        "category": "Gym Overview",
+        "summary": "Quick access to all key documents, guides, and tools for Vegvisir staff.",
+        "steps": [
+          {"id":"1","type":"action","text":"Coaching Development Guide: https://docs.google.com/document/d/19SrZIjh48qQwVK8Dz-HVvfLcRVVoF2xD-84Sp6fgVBc/edit","next":"2"},
+          {"id":"2","type":"action","text":"Organizational Structure & Contact Info: https://www.canva.com/design/DAF2DO-5xJk/PUTJXcTO9DFOtavWszPG4w/view","next":"3"},
+          {"id":"3","type":"action","text":"The Athlete Journey: https://www.canva.com/design/DAF2CTsRZIk/EKKKRHdtgtfrmAdGuAsy_Q/view","next":"4"},
+          {"id":"4","type":"action","text":"Conduct and Behavior Guide: https://www.canva.com/design/DAF2Ccid58Q/J-QEo_OXGYDcnFnYfEabQA/view","next":"5"},
+          {"id":"5","type":"action","text":"Walk-in Protocol: https://www.canva.com/design/DAF2ClVs3sc/egQJbmhR5pTsPLTF5-N0qQ/view","next":"6"},
+          {"id":"6","type":"end","text":"For the full resource list, refer to the master playbook Google Doc shared with all staff.","next":null}
+        ]
+      },
+      "source": "text",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    },
+    "sop_resources_coaches": {
+      "title": "Resource Links — Coaches",
+      "flow": {
+        "category": "Coaching",
+        "summary": "Key documents and guides specifically for coaches at Vegvisir.",
+        "steps": [
+          {"id":"1","type":"action","text":"Opening & Closing Routines: https://www.canva.com/design/DAF2s08iiXE/CxGH7YwLI_3XsqBKIG4h2Q/view","next":"2"},
+          {"id":"2","type":"action","text":"Coaching Ascension Model (5-Star Classes): https://docs.google.com/spreadsheets/d/13D5UD_-7nSy0tvaSdTAGSm541e3_bcPtGZLWUq5QoUE/edit","next":"3"},
+          {"id":"3","type":"action","text":"Group Classes Guide: https://www.canva.com/design/DAF2CV3vNGE/ntfAX5LMNQu9SNz5HMOtCQ/view","next":"4"},
+          {"id":"4","type":"action","text":"Personal Training & On-Ramp: https://www.canva.com/design/DAF2CiQ3n1g/rxkKWaO2ymXIFcpwu8Z5hA/view","next":"5"},
+          {"id":"5","type":"action","text":"The No Sweat Intro: https://www.canva.com/design/DAF2CcG-moQ/HiYhRHjfRJ23R7KSyZLLqw/view","next":"6"},
+          {"id":"6","type":"action","text":"Nutrition Coaching: https://www.canva.com/design/DAF2CkM04ic/H4jTlj3YkKR3MbehjwiJvg/view","next":"7"},
+          {"id":"7","type":"end","text":"Remote Programming: https://app.truecoach.co/coach/programs","next":null}
+        ]
+      },
+      "source": "text",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    }
+  },
+  "lastUpdated": "2026-06-29T00:00:00.000Z",
+  "version": 1
+}
