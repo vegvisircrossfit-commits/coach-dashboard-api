@@ -684,4 +684,28 @@ app.delete("/playbook/sop/:key", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WOD LIBRARY — GitHub-backed shared storage
+// ══════════════════════════════════════════════════════════════════════════════
+
+const WODS_FILE = "wods.json";
+
+async function getWodsFromGitHub() {
+  const resp = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${WODS_FILE}`, {
+    headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: "application/vnd.github+json" }
+  });
+  if (!resp.ok) throw new Error(`GitHub WODs fetch failed: ${resp.status}`);
+  const data = await resp.json();
+  const content = Buffer.from(data.content, "base64").toString("utf8");
+  return { wods: JSON.parse(content), sha: data.sha };
+}
+
+app.get("/wods", async (req, res) => {
+  try {
+    const { wods } = await getWodsFromGitHub();
+    res.json(wods);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); });
