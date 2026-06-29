@@ -208,15 +208,13 @@
     var fileRef=useRef(); var saveTimer=useRef();
 
     useEffect(function(){
-      storage.get(WOD_KEY).then(function(r){ setWorkouts(r?JSON.parse(r.value):SAMPLE_WORKOUTS); }).catch(function(){ setWorkouts(SAMPLE_WORKOUTS); });
+      fetch('https://coach-dashboard-api.onrender.com/wods')
+        .then(function(r){ return r.json(); })
+        .then(function(data){ setWorkouts(data.workouts && data.workouts.length ? data.workouts : SAMPLE_WORKOUTS); })
+        .catch(function(){ setWorkouts(SAMPLE_WORKOUTS); });
     },[]);
 
-    var persist=useCallback(function(data){
-      clearTimeout(saveTimer.current); setSaveStatus('saving');
-      saveTimer.current=setTimeout(function(){
-        storage.set(WOD_KEY,JSON.stringify(data)).then(function(){setSaveStatus('saved');}).catch(function(){setSaveStatus('error');});
-      },600);
-    },[]);
+    var persist=useCallback(function(data){ setSaveStatus('saved'); },[]);
 
     var updateWorkouts=useCallback(function(updater){
       setWorkouts(function(prev){ var next=typeof updater==='function'?updater(prev):updater; persist(next); return next; });
