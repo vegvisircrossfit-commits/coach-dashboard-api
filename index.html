@@ -491,18 +491,41 @@
     var audioRef=useRef(); var saveTimer=useRef();
 
     useEffect(function(){
-      storage.get(PLAYBOOK_KEY).then(function(r){setSops(r?JSON.parse(r.value):{});}).catch(function(){setSops({});});
+      fetch('https://coach-dashboard-api.onrender.com/playbook')
+        .then(function(r){return r.json();})
+        .then(function(data){setSops(data.sops||{});setSaveStatus('saved');})
+        .catch(function(){
+          // Fallback to localStorage if server unreachable
+          storage.get(PLAYBOOK_KEY).then(function(r){setSops(r?JSON.parse(r.value):{});}).catch(function(){setSops({});});
+        });
     },[]);
+
+    var playbookPin = localStorage.getItem('vegvisir_playbook_pin')||'';
 
     var persist=useCallback(function(data){
-      clearTimeout(saveTimer.current); setSaveStatus('saving');
-      saveTimer.current=setTimeout(function(){
-        storage.set(PLAYBOOK_KEY,JSON.stringify(data)).then(function(){setSaveStatus('saved');}).catch(function(){setSaveStatus('error');});
-      },600);
+      // Persist is now handled per-operation via server
     },[]);
 
-    var addSop=useCallback(function(key,data){setSops(function(prev){var next=Object.assign({},prev);next[key]=data;persist(next);return next;});},[persist]);
-    var deleteSop=useCallback(function(key){setSops(function(prev){var next=Object.assign({},prev);delete next[key];persist(next);return next;});if(selectedSop===key)setSelectedSop(null);},[persist,selectedSop]);
+    var addSop=useCallback(function(key,data){
+      setSops(function(prev){var next=Object.assign({},prev);next[key]=data;return next;});
+      setSaveStatus('saving');
+      fetch('https://coach-dashboard-api.onrender.com/playbook/sop',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({pin:playbookPin,key:key,sop:data})
+      }).then(function(r){return r.json();})
+      .then(function(d){setSaveStatus(d.ok?'saved':'error');})
+      .catch(function(){setSaveStatus('error');});
+    },[playbookPin]);
+    var deleteSop=useCallback(function(key){
+      setSops(function(prev){var next=Object.assign({},prev);delete next[key];return next;});
+      if(selectedSop===key)setSelectedSop(null);
+      fetch('https://coach-dashboard-api.onrender.com/playbook/sop/'+key,{
+        method:'DELETE',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({pin:playbookPin})
+      }).then(function(r){return r.json();})
+      .then(function(d){setSaveStatus(d.ok?'saved':'error');})
+      .catch(function(){setSaveStatus('error');});
+    },[playbookPin,selectedSop]);
 
     var handleAudioFiles=useCallback(function(files){
       var fileArray=Array.from(files);
@@ -568,7 +591,11 @@
             h('div',{style:{fontSize:10,letterSpacing:'0.12em',textTransform:'uppercase',color:saveStatus==='saved'?'#4F9D8C':saveStatus==='saving'?'#888':'#f44'}},saveStatus==='saved'?'✓ Saved':saveStatus==='saving'?'Saving…':'⚠ Error'),
             h('div',{style:{display:'flex',gap:6}},
               h('button',{className:'btn',onClick:function(){setAddMode(function(p){return p==='audio'?null:'audio';});},style:{background:addMode==='audio'?C.navy3:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'🎙 Audio'),
-              h('button',{className:'btn',onClick:function(){setAddMode(function(p){return p==='text'?null:'text';});},style:{background:addMode==='text'?C.gold:'#222',color:addMode==='text'?'#000':C.gold,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.gold}},'+ Add SOP')
+              h('button',{className:'btn',onClick:function(){
+                var pin=localStorage.getItem('vegvisir_playbook_pin');
+                if(!pin){pin=window.prompt('Enter admin PIN to add SOPs:');if(pin)localStorage.setItem('vegvisir_playbook_pin',pin);}
+                if(pin) setAddMode(function(p){return p==='text'?null:'text';});
+              },style:{background:addMode==='text'?C.gold:'#222',color:addMode==='text'?'#000':C.gold,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.gold}},'+ Add SOP')
             )
           )
         ),
