@@ -197,6 +197,7 @@
     var sm=useState([]); var selectedMovements=sm[0]; var setSelectedMovements=sm[1];
     var sb=useState([]); var selectedBuckets=sb[0]; var setSelectedBuckets=sb[1];
     var po=useState(false); var partnerOnly=po[0]; var setPartnerOnly=po[1];
+    var er=useState(false); var excludeRuns=er[0]; var setExcludeRuns=er[1];
     var wr=useState([0,200]); var weightRange=wr[0]; var setWeightRange=wr[1];
     var ms=useState(''); var movementSearch=ms[0]; var setMovementSearch=ms[1];
     var ex=useState(null); var expandedId=ex[0]; var setExpandedId=ex[1];
@@ -230,14 +231,15 @@
         var dm=selectedBuckets.length===0||selectedBuckets.some(function(bk){var b=BUCKETS.find(function(b){return b.key===bk;});return b&&b.test(w.duration);});
         var wm=w.weightMax===0?weightRange[0]===0:w.weightMax>=weightRange[0]&&w.weightMin<=weightRange[1];
         var pm=!partnerOnly||w.partner===true;
-        return nm&&mm&&dm&&wm&&pm;
+        var rm=!excludeRuns||!w.movements.includes('Running');
+        return nm&&mm&&dm&&wm&&pm&&rm;
       });
-    },[workouts,nameQuery,selectedMovements,selectedBuckets,weightRange,partnerOnly]);
+    },[workouts,nameQuery,selectedMovements,selectedBuckets,weightRange,partnerOnly,excludeRuns]);
 
     var toggleMovement=function(m){setSelectedMovements(function(p){return p.includes(m)?p.filter(function(x){return x!==m;}):[...p,m];});};
     var toggleBucket=function(k){setSelectedBuckets(function(p){return p.includes(k)?p.filter(function(x){return x!==k;}):[...p,k];});};
-    var clearFilters=function(){setNameQuery('');setSelectedMovements([]);setSelectedBuckets([]);setPartnerOnly(false);setWeightRange([0,200]);setMovementSearch('');};
-    var activeFilters=nameQuery||selectedMovements.length>0||selectedBuckets.length>0||partnerOnly||weightRange[0]>0||weightRange[1]<200;
+    var clearFilters=function(){setNameQuery('');setSelectedMovements([]);setSelectedBuckets([]);setPartnerOnly(false);setExcludeRuns(false);setWeightRange([0,200]);setMovementSearch('');};
+    var activeFilters=nameQuery||selectedMovements.length>0||selectedBuckets.length>0||partnerOnly||excludeRuns||weightRange[0]>0||weightRange[1]<200;
 
     var addWorkout=function(){
       if(!newWorkout.name||!newWorkout.duration) return;
@@ -307,8 +309,10 @@
           ),
           h('div',{style:{marginBottom:16}},
             h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',color:C.textDim,textTransform:'uppercase',marginBottom:8}},'Format'),
-            h('button',{className:'btn',onClick:function(){setPartnerOnly(function(p){return !p;});},style:{display:'flex',justifyContent:'space-between',alignItems:'center',width:'100%',padding:'7px 9px',borderRadius:4,background:partnerOnly?C.accent:C.navy2,border:'1px solid '+(partnerOnly?C.accent:C.line),color:partnerOnly?'#fff':C.text,fontFamily:'Glacial Indifference,Montserrat,sans-serif',textTransform:'uppercase'}},
-              h('span',{style:{fontSize:12,fontWeight:700}},'👥 Partner'))
+            h('button',{className:'btn',onClick:function(){setPartnerOnly(function(p){return !p;});},style:{display:'flex',justifyContent:'space-between',alignItems:'center',width:'100%',padding:'7px 9px',borderRadius:4,marginBottom:3,background:partnerOnly?C.accent:C.navy2,border:'1px solid '+(partnerOnly?C.accent:C.line),color:partnerOnly?'#fff':C.text,fontFamily:'Glacial Indifference,Montserrat,sans-serif',textTransform:'uppercase'}},
+              h('span',{style:{fontSize:12,fontWeight:700}},'👥 Partner')),
+            h('button',{className:'btn',onClick:function(){setExcludeRuns(function(p){return !p;});},style:{display:'flex',justifyContent:'space-between',alignItems:'center',width:'100%',padding:'7px 9px',borderRadius:4,background:excludeRuns?C.accent:C.navy2,border:'1px solid '+(excludeRuns?C.accent:C.line),color:excludeRuns?'#fff':C.text,fontFamily:'Glacial Indifference,Montserrat,sans-serif',textTransform:'uppercase'}},
+              h('span',{style:{fontSize:12,fontWeight:700}},'🚫 Exclude Runs'))
           ),
           h('div',{style:{marginBottom:16}},
             h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',color:C.textDim,textTransform:'uppercase',marginBottom:8}},'Weight (lbs)'),
@@ -383,7 +387,17 @@
                         h('div',{style:{color:C.textFaint,fontSize:12,transform:expanded?'rotate(180deg)':'none',transition:'transform 0.2s'}},'▼')
                       )
                     ),
-                    expanded&&h('div',{className:'fade-in',style:{borderTop:'1px solid '+C.line,padding:'10px 14px',background:C.navy}},h('div',{style:{fontSize:13,color:C.textDim,lineHeight:1.6}},w.description||h('em',{style:{color:C.textFaint}},'No description.')))
+                    expanded&&h('div',{className:'fade-in',style:{borderTop:'1px solid '+C.line,padding:'10px 14px',background:C.navy}},
+                      h('div',{style:{display:'flex',flexWrap:'wrap',gap:20,marginBottom:10}},
+                        h('div',null,h('div',{style:{fontSize:9,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:2}},'Type'),h('div',{style:{fontSize:13,fontWeight:700,color:C.text}},w.type||'—')),
+                        h('div',null,h('div',{style:{fontSize:9,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:2}},'Duration'),h('div',{style:{fontSize:13,fontWeight:700,color:C.text}},(w.duration||'—')+' min')),
+                        (w.weightMin>0||w.weightMax>0)&&h('div',null,h('div',{style:{fontSize:9,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:2}},'Weight'),h('div',{style:{fontSize:13,fontWeight:700,color:C.text}},w.weightMin===w.weightMax?w.weightMax+' lbs':w.weightMin+'–'+w.weightMax+' lbs'))
+                      ),
+                      h('div',{style:{fontSize:9,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:5}},'Movements'),
+                      h('div',{style:{display:'flex',flexWrap:'wrap',gap:5}},
+                        w.movements.length?w.movements.map(function(m){return h('span',{key:m,style:{fontSize:11,padding:'3px 8px',borderRadius:2,background:C.navy3,color:C.textDim,border:'1px solid '+C.line}},m);}):h('em',{style:{color:C.textFaint,fontSize:12}},'No movements tagged.')
+                      )
+                    )
                   );
                 })
               )
