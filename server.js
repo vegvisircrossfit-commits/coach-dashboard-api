@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -24,7 +23,7 @@ const WODIFY_HEADERS = { "x-api-key": WODIFY_API_KEY, "Accept": "application/jso
 
 app.use(cors());
 app.use("/slack/events", express.raw({ type: "application/json" }));
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/health", (req, res) => res.json({
