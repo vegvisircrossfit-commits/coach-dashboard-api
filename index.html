@@ -406,7 +406,7 @@
   function callClaude(messages,systemPrompt){
     var body={model:'claude-sonnet-4-6',max_tokens:1000,messages:messages};
     if(systemPrompt) body.system=systemPrompt;
-    return fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01'},body:JSON.stringify(body)})
+    return fetch('https://coach-dashboard-api.onrender.com/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e&&e.error&&e.error.message||'HTTP '+r.status);});return r.json();})
       .then(function(data){return data.content.map(function(b){return b.text||'';}).join('').trim();});
   }
