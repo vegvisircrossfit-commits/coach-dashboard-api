@@ -1,3 +1,4 @@
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -736,6 +737,28 @@ app.post("/transcribe", async (req, res) => {
     if (!resp.ok) return res.status(resp.status).json({ error: data?.error?.message || "Claude error" });
     const text = data.content?.map(b => b.text || "").join("").trim() || "";
     res.json({ transcript: text });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// General Claude proxy (browser can't call Anthropic API directly due to CORS)
+app.post("/claude", async (req, res) => {
+  try {
+    const body = req.body;
+    if (!body.model) body.model = "claude-sonnet-4-6";
+    if (!body.max_tokens) body.max_tokens = 1000;
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "anthropic-version": "2023-06-01",
+        "x-api-key": ANTHROPIC_API_KEY
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json(data);
+    res.json(data);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
