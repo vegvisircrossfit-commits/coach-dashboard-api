@@ -439,7 +439,7 @@
     var reset=function(){setVisited(new Set(['1']));setPath(['1']);};
     var follow=function(nextId){if(!nextId)return;setPath(function(p){return [...p,nextId];});setVisited(function(v){return new Set([...v,nextId]);});};
     var currentStep=stepMap[path[path.length-1]];
-    var isComplete=!currentStep||(!currentStep.next&&currentStep.type!=='decision')||currentStep.type==='end';
+    var isComplete=!currentStep||currentStep.type==='end'||(!currentStep.next&&currentStep.type!=='decision'&&currentStep.type!=='action');
 
     var typeStyle=function(type){
       if(type==='decision') return {bg:'rgba(201,168,76,0.12)',border:'1px solid '+C.gold,color:C.gold};
