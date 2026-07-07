@@ -707,4 +707,36 @@ app.get("/wods", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+
+// Audio transcription proxy (browser can't call Anthropic API directly due to CORS)
+app.post("/transcribe", async (req, res) => {
+  try {
+    const { audio_base64, media_type } = req.body;
+    if (!audio_base64) return res.status(400).json({ error: "Missing audio_base64" });
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "anthropic-version": "2023-06-01",
+        "x-api-key": ANTHROPIC_API_KEY
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 2000,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "document", source: { type: "base64", media_type: media_type || "audio/mp4", data: audio_base64 } },
+            { type: "text", text: "Transcribe this audio recording exactly as spoken. Output only the transcription, nothing else." }
+          ]
+        }]
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json({ error: data?.error?.message || "Claude error" });
+    const text = data.content?.map(b => b.text || "").join("").trim() || "";
+    res.json({ transcript: text });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); });
