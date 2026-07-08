@@ -563,16 +563,18 @@
     var filteredSops=useMemo(function(){
       if(!sops) return [];
       return Object.entries(sops).filter(function(entry){
-        var sop=entry[1]; var cat=sop.flow&&sop.flow.category||'Other';
+        var sop=entry[1];
+        var cat=sop.category||(sop.flow&&sop.flow.category)||'Other';
         var matchCat=activeCategory==='All'||cat===activeCategory;
-        var matchSearch=!search||sop.title.toLowerCase().includes(search.toLowerCase())||(sop.flow&&sop.flow.summary&&sop.flow.summary.toLowerCase().includes(search.toLowerCase()));
+        var summary=sop.summary||(sop.flow&&sop.flow.summary)||'';
+        var matchSearch=!search||sop.title.toLowerCase().includes(search.toLowerCase())||summary.toLowerCase().includes(search.toLowerCase());
         return matchCat&&matchSearch;
       });
     },[sops,search,activeCategory]);
 
     var catCounts=useMemo(function(){
       var counts={};
-      Object.values(sops||{}).forEach(function(s){var cat=s.flow&&s.flow.category||'Other';counts[cat]=(counts[cat]||0)+1;});
+      Object.values(sops||{}).forEach(function(s){var cat=s.category||(s.flow&&s.flow.category)||'Other';counts[cat]=(counts[cat]||0)+1;});
       return counts;
     },[sops]);
 
@@ -639,22 +641,34 @@
             : h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))',gap:12}},
                 filteredSops.map(function(entry){
                   var key=entry[0]; var sop=entry[1];
-                  var cat=sop.flow&&sop.flow.category||'Other';
+                  var cat=sop.category||(sop.flow&&sop.flow.category)||'Other';
                   var colors=CAT_COLORS[cat]||{accent:C.textDim};
                   var isSelected=selectedSop===key;
+                  var summary=sop.summary||(sop.flow&&sop.flow.summary)||'No summary';
+                  var steps=sop.steps||(sop.flow&&sop.flow.steps)||[];
                   return h('div',{key:key,className:'card',style:{background:C.navy2,border:'1px solid '+(isSelected?colors.accent:C.line),borderRadius:9,padding:14,cursor:'pointer',gridColumn:isSelected?'1 / -1':undefined},onClick:function(){setSelectedSop(isSelected?null:key);}},
                     h('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:7}},
                       h('div',{style:{flex:1}},
                         h('div',{style:{fontSize:8,textTransform:'uppercase',letterSpacing:'1px',color:colors.accent,marginBottom:3}},cat),
                         h('div',{style:{fontWeight:700,fontSize:13}},sop.title)
                       ),
-                      h('div',{style:{display:'flex',gap:7,alignItems:'center'}},
-                        h('span',{style:{color:C.textFaint,fontSize:12}},isSelected?'▲':'▼'),
-                        h('span',{style:{color:'#555',fontSize:12,cursor:'pointer'},onClick:function(e){e.stopPropagation();if(window.confirm('Delete "'+sop.title+'"?'))deleteSop(key);}},'🗑')
-                      )
+                      h('span',{style:{color:C.textFaint,fontSize:12}},isSelected?'▲':'▼')
                     ),
-                    !isSelected&&h('div',{style:{fontSize:11,color:C.textFaint,lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}},sop.flow&&sop.flow.summary||'No summary'),
-                    isSelected&&sop.flow&&sop.flow.steps&&h(FlowChart,{steps:sop.flow.steps})
+                    !isSelected&&h('div',{style:{fontSize:11,color:C.textFaint,lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}},summary),
+                    isSelected&&h('div',{style:{paddingTop:10}},
+                      h('div',{style:{fontSize:11,color:C.textDim,marginBottom:12,lineHeight:1.5}},summary),
+                      Array.isArray(steps)&&steps.length>0
+                        ? h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+                            steps.map(function(step,i){
+                              var text=typeof step==='string'?step:(step.text||'');
+                              return h('div',{key:i,style:{display:'flex',gap:10,alignItems:'flex-start'}},
+                                h('div',{style:{width:22,height:22,borderRadius:'50%',background:C.navy3,border:'1px solid '+C.line,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:colors.accent,flexShrink:0}},i+1),
+                                h('div',{style:{fontSize:13,color:C.text,lineHeight:1.6,paddingTop:2}},text)
+                              );
+                            })
+                          )
+                        : h('div',{style:{fontSize:12,color:C.textFaint,fontStyle:'italic'}},'No steps available.')
+                    )
                   );
                 })
               )
