@@ -379,8 +379,9 @@ async function generateAndCacheSummary(athlete) {
   if (!context) return "";
   const system = `You create ultra-concise coach briefs for CrossFit athletes.
 Return ONLY valid JSON, no markdown.
-Format: {"dos":["max 3 short bullets"],"donts":["max 3 short bullets"],"injuries":"one line or empty","upcoming":"one line or empty","summary":"one sentence"}
-Each bullet under 8 words.`;
+Format: {"dos":["max 3 short bullets"],"donts":["max 3 short bullets"],"injuries":"one line or empty","upcoming":"one line or empty","trip_start":"YYYY-MM-DD or empty","trip_end":"YYYY-MM-DD or empty","summary":"one sentence"}
+Each bullet under 8 words. Be specific and actionable.
+For trip_start/trip_end: only fill if specific dates are mentioned (e.g. "leaving June 30, back July 7"). Leave empty if dates are vague.`;
   const raw = await callClaude(system, `Athlete: ${athlete.athlete}\n\n${context}`);
   const parsed = parseJSON(raw);
   if (!parsed) return context.slice(0, 200);
@@ -484,7 +485,8 @@ function looksLikeAthleteMessage(text) {
 async function handleNewAthlete(text) {
   const system = `Extract athlete data from CrossFit consultation notes. Return ONLY valid JSON, no markdown.
 Format: {"athlete":"Full Name","goals":"...","injuries":"...","dos":"...","donts":"...","upcoming":"...","notes":"...","coach_notes":"one sentence"}
-Use empty string for missing fields.`;
+Use empty string for missing fields.
+IMPORTANT: "upcoming" is ONLY for travel, trips, vacations, or planned absences from the gym. Do NOT put start dates, first class dates, membership dates, or join dates in "upcoming". Those are not absences.`;
   const raw = await callClaude(system, `Parse this new athlete note:\n\n${text}`);
   const parsed = parseJSON(raw);
   if (!parsed?.athlete) { console.log("Could not parse new athlete name"); return; }
@@ -522,7 +524,8 @@ async function handleAthleteUpdate(text) {
   const system = `Extract athlete update from CrossFit coach notes. Athlete name is first.
 Return ONLY valid JSON, no markdown.
 Format: {"athlete":"Full Name","injuries":null,"upcoming":null,"dos":null,"donts":null,"coach_notes":"full summary"}
-Use null for fields not mentioned.`;
+Use null for fields not mentioned.
+IMPORTANT: "upcoming" is ONLY for travel, trips, vacations, or planned absences from the gym (e.g. "going to Austin", "out of town next week", "missing class for vacation"). Do NOT put start dates, first class dates, or check-in dates in "upcoming".`;
   const raw = await callClaude(system, `Parse this update:\n\n${text}`);
   const parsed = parseJSON(raw);
   if (!parsed?.athlete) { console.log("Could not parse athlete name"); return; }
