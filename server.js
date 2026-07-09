@@ -651,12 +651,18 @@ app.post("/athletes", async (req, res) => {
 });
 
 app.get("/admin/regenerate-summaries", async (req, res) => {
-  res.json({ ok: true, message: "Regenerating summaries in background..." });
+  const forceAll = req.query.force === 'true';
+  res.json({ ok: true, message: `Regenerating summaries in background (force=${forceAll})...` });
   try {
     const athletes = await getAllAthletes();
-    const needsSummary = athletes.filter(a => !a.ai_summary && (a.goals || a.injuries || a.dos || a.donts || a.coach_notes));
-    console.log(`[Admin] Regenerating ${needsSummary.length} summaries`);
-    for (const a of needsSummary) { await generateAndCacheSummary(a); await new Promise(r => setTimeout(r, 500)); }
+    const toUpdate = forceAll
+      ? athletes.filter(a => a.goals || a.injuries || a.dos || a.donts || a.coach_notes || a.upcoming)
+      : athletes.filter(a => !a.ai_summary && (a.goals || a.injuries || a.dos || a.donts || a.coach_notes));
+    console.log(`[Admin] Regenerating ${toUpdate.length} summaries (force=${forceAll})`);
+    for (const a of toUpdate) {
+      await generateAndCacheSummary(a);
+      await new Promise(r => setTimeout(r, 500));
+    }
     console.log("[Admin] Done");
   } catch (err) { console.error("[Admin] Error:", err.message); }
 });
@@ -751,6 +757,15 @@ async function savePlaybookToGitHub(playbook, sha) {
   if (!resp.ok) { const e = await resp.json(); throw new Error(`GitHub save failed: ${e.message}`); }
   return resp.json();
 }
+
+app.get("/playbook/debug", async (req, res) => {
+  try {
+    const resp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/${PLAYBOOK_FILE}`, {
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}` }
+    });
+    res.json({ status: resp.status, ok: resp.ok, hasToken: !!GITHUB_TOKEN, repo: GITHUB_REPO, file: PLAYBOOK_FILE });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 app.get("/playbook", async (req, res) => {
   try {
