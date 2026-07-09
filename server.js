@@ -767,4 +767,123 @@ app.post("/claude", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ATHLETE CHECK-IN SYNC — pulls from Wodify appointments, updates Sheet
+// ══════════════════════════════════════════════════════════════════════════════
+
+const CHECKIN_SERVICE_ID = "13312";
+
+async function syncAthleteCheckIns() {
+  console.log("[CheckIn Sync] Starting...");
+  try {
+    // Page through all Athlete Check-In bookings, newest first
+    const latestByClient = {};
+    let page = 1;
+    let cutoffReached = false;
+
+    while (!cutoffReached) {
+      const data = await wodifyGet(API_BASE,
+        `/appointments/bookings/clients?page=${page}&page_size=200&sort=desc_local_appointment_start_datetime`
+      );
+      const bookings = data.client_appointment_bookings || [];
+      if (!bookings.length) break;
+
+      for (const b of bookings) {
+        // Only process Athlete Check-In service
+        if (String(b.service_id) !== CHECKIN_SERVICE_ID) continue;
+        // Only count Signed In or Booked (not cancelled/no-show)
+        if (![2, 4].includes(b.booking_status_id)) continue;
+
+        const clientId = String(b.client_id);
+        const dateStr = b.local_appointment_start_datetime?.slice(0, 10) || "";
+        if (!dateStr) continue;
+
+        // Since sorted desc, first occurrence per client is most recent
+        if (!latestByClient[clientId]) {
+          latestByClient[clientId] = { name: b.client, date: dateStr, clientId };
+        }
+      }
+
+      // Stop once we've gone back far enough (2 years)
+      const oldest = bookings[bookings.length - 1];
+      const oldestDate = oldest?.local_appointment_start_datetime?.slice(0, 10) || "";
+      if (oldestDate && oldestDate < "2024-01-01") cutoffReached = true;
+      if (!data.pagination?.has_more) break;
+      page++;
+    }
+
+    console.log(`[CheckIn Sync] Found ${Object.keys(latestByClient).length} athletes with check-ins`);
+
+    // Load all athletes from Sheet
+    const athletes = await getAllAthletes();
+    const updates = [];
+
+    for (const athlete of athletes) {
+      // Match by wodify_id first, then by name
+      const match = latestByClient[athlete.wodify_id] ||
+        Object.values(latestByClient).find(c =>
+          c.name.toLowerCase() === athlete.athlete.toLowerCase()
+        );
+
+      if (!match) continue;
+
+      const lastCheckin = match.date;
+      // Next check-in = 90 days after last
+      const next = new Date(lastCheckin);
+      next.setDate(next.getDate() + 90);
+      const nextCheckin = next.toISOString().slice(0, 10);
+
+      // Only update if different from what's in the sheet
+      if (athlete.last_checkin === lastCheckin) continue;
+
+      updates.push(
+        { range: `Sheet1!B${athlete.row_number}`, values: [[lastCheckin]] },
+        { range: `Sheet1!C${athlete.row_number}`, values: [[nextCheckin]] }
+      );
+      console.log(`[CheckIn Sync] ${athlete.athlete}: ${lastCheckin} → next ${nextCheckin}`);
+    }
+
+    if (updates.length) {
+      await sheetsBatchUpdate(updates);
+      console.log(`[CheckIn Sync] Updated ${updates.length / 2} athletes`);
+    } else {
+      console.log("[CheckIn Sync] No updates needed");
+    }
+
+    return { updated: updates.length / 2, total: Object.keys(latestByClient).length };
+  } catch (err) {
+    console.error("[CheckIn Sync] Error:", err.message);
+    throw err;
+  }
+}
+
+// Run once daily at 3AM CST
+let lastCheckinSync = null;
+function startCheckinCron() {
+  setInterval(() => {
+    const now = new Date().toLocaleString("en-US", {
+      timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit", hour12: false
+    });
+    const hhmm = now.replace(",", "").trim().slice(0, 5);
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+    if (hhmm === "03:00" && lastCheckinSync !== today) {
+      lastCheckinSync = today;
+      console.log("[CheckIn Cron] Running daily sync");
+      syncAthleteCheckIns().catch(e => console.error("[CheckIn Cron] Error:", e.message));
+    }
+  }, 30000);
+  console.log("[CheckIn Cron] Started");
+}
+
+// Manual trigger
+app.get("/admin/sync-checkins", async (req, res) => {
+  try {
+    const result = await syncAthleteCheckIns();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); startCheckinCron(); });
