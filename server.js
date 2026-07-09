@@ -160,15 +160,15 @@ const KNOWN_ANCHORS = [
 const anchorCache = {};
 KNOWN_ANCHORS.forEach(a => { anchorCache[a.date] = a; });
 
-async function findTodaysClasses(today) {
-  // Use exact anchor if available
-  if (anchorCache[today]) {
-    const anchor = anchorCache[today];
-    const WINDOW = 150;
-    const ids = Array.from({ length: WINDOW * 2 + 1 }, (_, i) => anchor.id - WINDOW + i);
-    console.log(`Using exact anchor for ${today}: ${anchor.id}`);
+// Fetch IDs in small batches to avoid Wodify rate limiting
+async function fetchClassBatch(ids, today) {
+  const BATCH_SIZE = 10;
+  const DELAY_MS = 150;
+  const found = [];
+  for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+    const batch = ids.slice(i, i + BATCH_SIZE);
     const results = await Promise.all(
-      ids.map(id =>
+      batch.map(id =>
         wodifyGet(API_BASE, `/classes/${id}`)
           .then(data => {
             if (data.start_date === today && !data.is_cancelled && RECURRING_IDS.has(data.recurring_class_id)) return data;
@@ -176,36 +176,42 @@ async function findTodaysClasses(today) {
           }).catch(() => null)
       )
     );
-    return results.filter(Boolean)
+    found.push(...results.filter(Boolean));
+    if (i + BATCH_SIZE < ids.length) await new Promise(r => setTimeout(r, DELAY_MS));
+  }
+  return found;
+}
+
+async function findTodaysClasses(today) {
+  // Use exact anchor if available — scan ±30 IDs (classes cluster tightly)
+  if (anchorCache[today]) {
+    const anchor = anchorCache[today];
+    const WINDOW = 30;
+    const ids = Array.from({ length: WINDOW * 2 + 1 }, (_, i) => anchor.id - WINDOW + i);
+    console.log(`Using exact anchor for ${today}: ${anchor.id} (scanning ${ids.length} IDs)`);
+    const results = await fetchClassBatch(ids, today);
+    return results
       .filter((c, i, arr) => arr.findIndex(x => x.recurring_class_id === c.recurring_class_id) === i)
       .sort((a, b) => a.start_time > b.start_time ? 1 : -1);
   }
 
-  // Fallback: find closest anchor and estimate
+  // Fallback: find closest anchor and estimate with wider window
   const sorted = KNOWN_ANCHORS.slice().sort((a, b) => a.date.localeCompare(b.date));
   let best = sorted[sorted.length - 1];
   for (const a of sorted) { if (a.date <= today) best = a; }
   const daysDiff = Math.round((new Date(today) - new Date(best.date)) / 86400000);
   const estimated = best.id + daysDiff * 75000;
-  const WINDOW = 300;
+  const WINDOW = 100;
   console.log(`Estimating for ${today}: ~${estimated} (${daysDiff} days from ${best.date})`);
   const ids = Array.from({ length: WINDOW * 2 + 1 }, (_, i) => estimated - WINDOW + i);
-  const results = await Promise.all(
-    ids.map(id =>
-      wodifyGet(API_BASE, `/classes/${id}`)
-        .then(data => {
-          if (data.start_date === today && !data.is_cancelled && RECURRING_IDS.has(data.recurring_class_id)) return data;
-          return null;
-        }).catch(() => null)
-    )
-  );
-  const found = results.filter(Boolean)
+  const found = await fetchClassBatch(ids, today);
+  const deduped = found
     .filter((c, i, arr) => arr.findIndex(x => x.recurring_class_id === c.recurring_class_id) === i)
     .sort((a, b) => a.start_time > b.start_time ? 1 : -1);
-  if (found.length > 0 && !anchorCache[today]) {
-    anchorCache[today] = { date: today, id: found[0].id, recurring_id: found[0].recurring_class_id };
+  if (deduped.length > 0 && !anchorCache[today]) {
+    anchorCache[today] = { date: today, id: deduped[0].id, recurring_id: deduped[0].recurring_class_id };
   }
-  return found;
+  return deduped;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
