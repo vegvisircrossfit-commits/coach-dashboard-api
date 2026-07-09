@@ -719,7 +719,25 @@
     var nc2 = useState(athlete.next_checkin||''); var nextCheckin = nc2[0]; var setNextCheckin = nc2[1];
 
     var checkinOverdue = nextCheckin && new Date(nextCheckin) < new Date();
-    var hasAlert = athlete.injuries || checkinOverdue;
+
+    // Parse trip status from AI summary
+    var tripStatus = null;
+    if (athlete.ai_summary) {
+      try {
+        var brief = typeof athlete.ai_summary === 'string' ? JSON.parse(athlete.ai_summary) : athlete.ai_summary;
+        var today = new Date(); today.setHours(0,0,0,0);
+        var tripStart = brief.trip_start ? new Date(brief.trip_start) : null;
+        var tripEnd = brief.trip_end ? new Date(brief.trip_end) : null;
+        if (tripStart && tripEnd) {
+          if (today >= tripStart && today <= tripEnd) tripStatus = 'away';
+          else if (today > tripEnd && (today - tripEnd) / 86400000 <= 7) tripStatus = 'returned';
+        } else if (tripStart && !tripEnd) {
+          if (today >= tripStart) tripStatus = 'away';
+        }
+      } catch(e) {}
+    }
+
+    var hasAlert = athlete.injuries || checkinOverdue || tripStatus === 'away';
 
     var saveNote = function() {
       setSaving('saving');
@@ -764,7 +782,9 @@
           h('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:3}},
             h('span',{style:{fontSize:14,fontWeight:800,letterSpacing:'0.02em'}},athlete.athlete),
             checkinOverdue&&!checkinStatus&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',padding:'1px 6px',borderRadius:2}},'Check-in Due'),
-            athlete.upcoming&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.3)',padding:'1px 6px',borderRadius:2}},'✈ Trip')
+            tripStatus==='away'&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.15)',border:'1px solid rgba(201,168,76,0.4)',padding:'1px 6px',borderRadius:2}},'✈ Currently Away'),
+            tripStatus==='returned'&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.green,background:'rgba(79,157,140,0.15)',border:'1px solid rgba(79,157,140,0.4)',padding:'1px 6px',borderRadius:2}},'🔄 Just Returned'),
+            !tripStatus&&athlete.upcoming&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.3)',padding:'1px 6px',borderRadius:2}},'✈ Trip Upcoming')
           ),
           athlete.injuries
             ? h('div',{style:{fontSize:11,color:'#ef4444',fontWeight:600}},'⚠ '+athlete.injuries)
@@ -999,7 +1019,14 @@
                       h('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:3,flexWrap:'wrap'}},
                         h('span',{style:{fontSize:14,fontWeight:800}},a.athlete),
                         overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',padding:'1px 5px',borderRadius:2}},'Check-in Due'),
-                        a.upcoming&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.3)',padding:'1px 5px',borderRadius:2}},'✈ Trip')
+                        (function(){
+                          var ts=null;
+                          if(a.ai_summary){try{var b=JSON.parse(a.ai_summary);var td=new Date();td.setHours(0,0,0,0);var ts1=b.trip_start?new Date(b.trip_start):null;var te1=b.trip_end?new Date(b.trip_end):null;if(ts1&&te1){if(td>=ts1&&td<=te1)ts='away';else if(td>te1&&(td-te1)/86400000<=7)ts='returned';}else if(ts1&&td>=ts1)ts='away';}catch(e){}}
+                          if(ts==='away') return h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.15)',border:'1px solid rgba(201,168,76,0.4)',padding:'1px 5px',borderRadius:2}},'✈ Away');
+                          if(ts==='returned') return h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:C.green,background:'rgba(79,157,140,0.15)',border:'1px solid rgba(79,157,140,0.4)',padding:'1px 5px',borderRadius:2}},'🔄 Just Returned');
+                          if(a.upcoming) return h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.3)',padding:'1px 5px',borderRadius:2}},'✈ Trip');
+                          return null;
+                        })()
                       ),
                       a.injuries
                         ? h('div',{style:{fontSize:11,color:'#ef4444',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},'⚠ '+a.injuries)
