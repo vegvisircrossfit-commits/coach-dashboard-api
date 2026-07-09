@@ -707,15 +707,19 @@
   function AthleteCard(props) {
     var athlete = props.athlete;
     var onSaveNote = props.onSaveNote;
+    var onCheckin = props.onCheckin;
     var forceExpanded = props.forceExpanded || false;
     var ex = useState(false); var expanded = ex[0]; var setExpanded = ex[1];
     expanded = expanded || forceExpanded;
     var en = useState(false); var editing = en[0]; var setEditing = en[1];
     var nc = useState(athlete.coach_notes||''); var noteContent = nc[0]; var setNoteContent = nc[1];
     var sv = useState(null); var saving = sv[0]; var setSaving = sv[1];
+    var cs = useState(null); var checkinStatus = cs[0]; var setCheckinStatus = cs[1];
+    var lc = useState(athlete.last_checkin||''); var lastCheckin = lc[0]; var setLastCheckin = lc[1];
+    var nc2 = useState(athlete.next_checkin||''); var nextCheckin = nc2[0]; var setNextCheckin = nc2[1];
 
-    var hasAlert = athlete.injuries || (athlete.next_checkin && new Date(athlete.next_checkin) < new Date());
-    var checkinOverdue = athlete.next_checkin && new Date(athlete.next_checkin) < new Date();
+    var hasAlert = athlete.injuries || (nextCheckin && new Date(nextCheckin) < new Date());
+    var checkinOverdue = nextCheckin && new Date(nextCheckin) < new Date();
 
     var saveNote = function() {
       setSaving('saving');
@@ -727,6 +731,26 @@
       .then(function(r) { return r.json(); })
       .then(function() { setSaving('saved'); setEditing(false); if(onSaveNote) onSaveNote(athlete.row_number, noteContent); })
       .catch(function() { setSaving('error'); });
+    };
+
+    var logCheckin = function() {
+      setCheckinStatus('saving');
+      fetch('https://coach-dashboard-api.onrender.com/athletes/'+athlete.row_number+'/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wodify_id: athlete.wodify_id })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if(d.ok) {
+          setCheckinStatus('saved');
+          setLastCheckin(d.last_checkin);
+          setNextCheckin(d.next_checkin);
+          if(onCheckin) onCheckin(athlete.row_number, d.last_checkin, d.next_checkin);
+          setTimeout(function(){ setCheckinStatus(null); }, 3000);
+        } else { setCheckinStatus('error'); }
+      })
+      .catch(function() { setCheckinStatus('error'); });
     };
 
     return h('div',{style:{background:C.navy2,border:'1px solid '+(hasAlert?'rgba(239,68,68,0.3)':C.line),borderRadius:9,overflow:'hidden',marginBottom:10}},
@@ -787,6 +811,18 @@
           h('div',{style:{fontSize:12,color:C.text,lineHeight:1.5}},athlete.upcoming)
         ),
 
+        // Check-in button
+        athlete.row_number&&h('div',{style:{marginBottom:14}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}},
+            h('button',{className:'btn',onClick:function(e){e.stopPropagation();logCheckin();},disabled:checkinStatus==='saving',
+              style:{background:checkinStatus==='saved'?C.green:checkinStatus==='error'?'#ef4444':C.accent,color:'#fff',padding:'7px 16px',fontWeight:700,fontSize:12,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:4,opacity:checkinStatus==='saving'?0.6:1}},
+              checkinStatus==='saving'?'Logging…':checkinStatus==='saved'?'✓ Check-in Logged!':checkinStatus==='error'?'⚠ Error — Retry':'✓ Log Check-In Today'),
+            lastCheckin&&h('div',{style:{fontSize:10,color:C.textFaint}},
+              'Last: ',h('span',{style:{color:C.text}},lastCheckin),
+              nextCheckin&&h('span',null,' · Next: ',h('span',{style:{color:new Date(nextCheckin)<new Date()?'#ef4444':C.green}},nextCheckin)))
+          )
+        ),
+
         // Coach notes
         h('div',null,
           h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
@@ -837,6 +873,17 @@
     },[]);
 
     useEffect(function(){loadAthletes();},[loadAthletes]);
+
+    var handleCheckin = function(rowNumber, lastCheckin, nextCheckin) {
+      setAllAthletes(function(prev){
+        return prev.map(function(a){
+          return a.row_number===rowNumber ? Object.assign({},a,{last_checkin:lastCheckin,next_checkin:nextCheckin}) : a;
+        });
+      });
+      if(selectedAthlete && selectedAthlete.row_number===rowNumber){
+        setSelectedAthlete(function(prev){ return Object.assign({},prev,{last_checkin:lastCheckin,next_checkin:nextCheckin}); });
+      }
+    };
 
     var handleSaveNote = function(rowNumber, newNote) {
       setAllAthletes(function(prev){
@@ -891,7 +938,7 @@
           )
         ),
         h('div',{style:{padding:'16px 20px',flex:1,overflowY:'auto'}},
-          h(AthleteCard,{athlete:selectedAthlete,onSaveNote:handleSaveNote,forceExpanded:true})
+          h(AthleteCard,{athlete:selectedAthlete,onSaveNote:handleSaveNote,onCheckin:handleCheckin,forceExpanded:true})
         )
       );
     }
