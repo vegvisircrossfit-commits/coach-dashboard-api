@@ -774,15 +774,33 @@ app.post("/claude", async (req, res) => {
 
 const CHECKIN_SERVICE_ID = "13312";
 
+async function getClientMemberSince(clientId) {
+  try {
+    const data = await wodifyGet(API_BASE, `/clients/${clientId}`);
+    return data.member_since || null;
+  } catch { return null; }
+}
+
+function calcNextCheckin(lastCheckinDate, memberSinceDate) {
+  const last = new Date(lastCheckinDate);
+  const memberSince = new Date(memberSinceDate || lastCheckinDate);
+  const now = new Date();
+  // Within first 90 days of membership → 30-day intervals
+  const daysSinceJoin = Math.round((now - memberSince) / 86400000);
+  const intervalDays = daysSinceJoin < 90 ? 30 : 90;
+  const next = new Date(last);
+  next.setDate(next.getDate() + intervalDays);
+  return { nextCheckin: next.toISOString().slice(0, 10), intervalDays };
+}
+
 async function syncAthleteCheckIns() {
   console.log("[CheckIn Sync] Starting...");
   try {
     // Page through all Athlete Check-In bookings, newest first
     const latestByClient = {};
     let page = 1;
-    let cutoffReached = false;
 
-    while (!cutoffReached) {
+    while (true) {
       const data = await wodifyGet(API_BASE,
         `/appointments/bookings/clients?page=${page}&page_size=200&sort=desc_local_appointment_start_datetime`
       );
@@ -790,58 +808,66 @@ async function syncAthleteCheckIns() {
       if (!bookings.length) break;
 
       for (const b of bookings) {
-        // Only process Athlete Check-In service
         if (String(b.service_id) !== CHECKIN_SERVICE_ID) continue;
-        // Only count Signed In or Booked (not cancelled/no-show)
         if (![2, 4].includes(b.booking_status_id)) continue;
-
         const clientId = String(b.client_id);
         const dateStr = b.local_appointment_start_datetime?.slice(0, 10) || "";
         if (!dateStr) continue;
-
-        // Since sorted desc, first occurrence per client is most recent
+        // Sorted desc — first hit per client = most recent
         if (!latestByClient[clientId]) {
           latestByClient[clientId] = { name: b.client, date: dateStr, clientId };
         }
       }
 
-      // Stop once we've gone back far enough (2 years)
       const oldest = bookings[bookings.length - 1];
       const oldestDate = oldest?.local_appointment_start_datetime?.slice(0, 10) || "";
-      if (oldestDate && oldestDate < "2024-01-01") cutoffReached = true;
+      if (oldestDate && oldestDate < "2024-01-01") break;
       if (!data.pagination?.has_more) break;
       page++;
     }
 
     console.log(`[CheckIn Sync] Found ${Object.keys(latestByClient).length} athletes with check-ins`);
 
-    // Load all athletes from Sheet
     const athletes = await getAllAthletes();
     const updates = [];
 
     for (const athlete of athletes) {
-      // Match by wodify_id first, then by name
       const match = latestByClient[athlete.wodify_id] ||
         Object.values(latestByClient).find(c =>
           c.name.toLowerCase() === athlete.athlete.toLowerCase()
         );
 
-      if (!match) continue;
+      // Get member_since from Wodify client record
+      const wodifyId = athlete.wodify_id || (match && match.clientId);
+      const memberSince = wodifyId ? await getClientMemberSince(wodifyId) : null;
 
-      const lastCheckin = match.date;
-      // Next check-in = 90 days after last
-      const next = new Date(lastCheckin);
-      next.setDate(next.getDate() + 90);
-      const nextCheckin = next.toISOString().slice(0, 10);
+      let lastCheckin, nextCheckin, intervalDays;
 
-      // Only update if different from what's in the sheet
-      if (athlete.last_checkin === lastCheckin) continue;
+      if (match) {
+        lastCheckin = match.date;
+        const calc = calcNextCheckin(lastCheckin, memberSince);
+        nextCheckin = calc.nextCheckin;
+        intervalDays = calc.intervalDays;
+      } else if (memberSince) {
+        // No check-in yet — use member_since as last check-in baseline
+        lastCheckin = memberSince;
+        const calc = calcNextCheckin(memberSince, memberSince);
+        nextCheckin = calc.nextCheckin;
+        intervalDays = calc.intervalDays;
+      } else {
+        continue;
+      }
+
+      if (athlete.last_checkin === lastCheckin && athlete.next_checkin === nextCheckin) continue;
 
       updates.push(
         { range: `Sheet1!B${athlete.row_number}`, values: [[lastCheckin]] },
         { range: `Sheet1!C${athlete.row_number}`, values: [[nextCheckin]] }
       );
-      console.log(`[CheckIn Sync] ${athlete.athlete}: ${lastCheckin} → next ${nextCheckin}`);
+      console.log(`[CheckIn Sync] ${athlete.athlete}: last=${lastCheckin} next=${nextCheckin} (${intervalDays}-day interval)`);
+
+      // Rate limit client lookups
+      await new Promise(r => setTimeout(r, 100));
     }
 
     if (updates.length) {
