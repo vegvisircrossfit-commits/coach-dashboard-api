@@ -532,9 +532,32 @@
     useEffect(function(){
       fetch('https://coach-dashboard-api.onrender.com/playbook')
         .then(function(r){return r.json();})
-        .then(function(data){setSops(data.sops||{});setSaveStatus('saved');})
+        .then(function(data){
+          // Normalize SOPs — handle both old flowchart format and new flat steps format
+          var sops = data.sops || {};
+          Object.keys(sops).forEach(function(key) {
+            var sop = sops[key];
+            // If it has flow already, leave it alone
+            if (sop.flow) return;
+            // Build a flow object from flat format
+            sop.flow = {
+              category: sop.category || 'Other',
+              summary: sop.summary || '',
+              steps: (sop.steps || []).map(function(step, i) {
+                var isLast = i === (sop.steps.length - 1);
+                return {
+                  id: String(i + 1),
+                  type: isLast ? 'end' : 'action',
+                  text: step,
+                  next: isLast ? null : String(i + 2)
+                };
+              })
+            };
+          });
+          setSops(sops);
+          setSaveStatus('saved');
+        })
         .catch(function(){
-          // Fallback to localStorage if server unreachable
           storage.get(PLAYBOOK_KEY).then(function(r){setSops(r?JSON.parse(r.value):{});}).catch(function(){setSops({});});
         });
     },[]);
@@ -600,16 +623,16 @@
     var filteredSops=useMemo(function(){
       if(!sops) return [];
       return Object.entries(sops).filter(function(entry){
-        var sop=entry[1]; var cat=sop.flow&&sop.flow.category||'Other';
+        var sop=entry[1]; var cat=sop.flow&&sop.flow.category||sop.category||'Other';
         var matchCat=activeCategory==='All'||cat===activeCategory;
-        var matchSearch=!search||sop.title.toLowerCase().includes(search.toLowerCase())||(sop.flow&&sop.flow.summary&&sop.flow.summary.toLowerCase().includes(search.toLowerCase()));
+        var matchSearch=!search||sop.title.toLowerCase().includes(search.toLowerCase())||(sop.flow&&sop.flow.summary&&sop.flow.summary.toLowerCase().includes(search.toLowerCase()))||(sop.summary&&sop.summary.toLowerCase().includes(search.toLowerCase()));
         return matchCat&&matchSearch;
       });
     },[sops,search,activeCategory]);
 
     var catCounts=useMemo(function(){
       var counts={};
-      Object.values(sops||{}).forEach(function(s){var cat=s.flow&&s.flow.category||'Other';counts[cat]=(counts[cat]||0)+1;});
+      Object.values(sops||{}).forEach(function(s){var cat=s.flow&&s.flow.category||s.category||'Other';counts[cat]=(counts[cat]||0)+1;});
       return counts;
     },[sops]);
 
@@ -676,7 +699,7 @@
             : h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))',gap:12}},
                 filteredSops.map(function(entry){
                   var key=entry[0]; var sop=entry[1];
-                  var cat=sop.flow&&sop.flow.category||'Other';
+                  var cat=sop.flow&&sop.flow.category||sop.category||'Other';
                   var colors=CAT_COLORS[cat]||{accent:C.textDim};
                   var isSelected=selectedSop===key;
                   return h('div',{key:key,className:'card',style:{background:C.navy2,border:'1px solid '+(isSelected?colors.accent:C.line),borderRadius:9,padding:14,cursor:'pointer',gridColumn:isSelected?'1 / -1':undefined},onClick:function(){setSelectedSop(isSelected?null:key);}},
@@ -690,7 +713,7 @@
                         h('span',{style:{color:'#555',fontSize:12,cursor:'pointer'},onClick:function(e){e.stopPropagation();if(window.confirm('Delete "'+sop.title+'"?'))deleteSop(key);}},'🗑')
                       )
                     ),
-                    !isSelected&&h('div',{style:{fontSize:11,color:C.textFaint,lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}},sop.flow&&sop.flow.summary||'No summary'),
+                    !isSelected&&h('div',{style:{fontSize:11,color:C.textFaint,lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}},sop.flow&&sop.flow.summary||sop.summary||'No summary'),
                     isSelected&&sop.flow&&sop.flow.steps&&h(FlowChart,{steps:sop.flow.steps})
                   );
                 })
