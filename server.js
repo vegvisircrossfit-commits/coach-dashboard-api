@@ -477,6 +477,22 @@ Use empty string for missing fields.`;
   console.log(`Processed new athlete: ${parsed.athlete}`);
 }
 
+function detectCheckin(text) {
+  // Detect check-in mentions in coach messages
+  return /check.?in|goal.?review|90.?day|30.?day/i.test(text);
+}
+
+function calcNextCheckinDate(lastDate, memberSince) {
+  const last = new Date(lastDate);
+  const joined = new Date(memberSince || lastDate);
+  const now = new Date();
+  const daysSinceJoin = Math.round((now - joined) / 86400000);
+  const intervalDays = daysSinceJoin < 90 ? 30 : 90;
+  const next = new Date(last);
+  next.setDate(next.getDate() + intervalDays);
+  return { nextCheckin: next.toISOString().slice(0, 10), intervalDays };
+}
+
 async function handleAthleteUpdate(text) {
   if (!looksLikeAthleteMessage(text)) { console.log(`[Slack] Skipping: "${text.slice(0,40)}"`); return; }
   const system = `Extract athlete update from CrossFit coach notes. Athlete name is first.
@@ -500,6 +516,24 @@ Use null for fields not mentioned.`;
     const prev = existing.coach_notes || "";
     fields.coach_notes = prev ? `${prev}\n[${date}] ${parsed.coach_notes}` : `[${date}] ${parsed.coach_notes}`;
   }
+
+  // Auto-update check-in dates if message mentions a check-in
+  if (detectCheckin(text)) {
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+    // Try to get member_since from Wodify if we have a wodify_id
+    let memberSince = null;
+    if (existing.wodify_id) {
+      try {
+        const clientData = await wodifyGet(API_BASE, `/clients/${existing.wodify_id}`);
+        memberSince = clientData.member_since || null;
+      } catch {}
+    }
+    const { nextCheckin, intervalDays } = calcNextCheckinDate(today, memberSince);
+    fields.last_checkin = today;
+    fields.next_checkin = nextCheckin;
+    console.log(`[CheckIn] ${parsed.athlete}: logged ${today}, next ${nextCheckin} (${intervalDays}-day interval)`);
+  }
+
   if (Object.keys(fields).length) {
     await updateAthlete(existing.row_number, fields);
     await generateAndCacheSummary({ ...existing, ...fields });
@@ -533,6 +567,40 @@ app.get("/athletes/search", async (req, res) => {
     const athlete = await findAthlete(req.query.name, req.query.wodify_id);
     if (!athlete) return res.status(404).json({ error: "Not found" });
     res.json(athlete);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+app.post("/athletes/:rowNumber/checkin", async (req, res) => {
+  try {
+    const rowNumber = parseInt(req.params.rowNumber);
+    if (isNaN(rowNumber) || rowNumber < 3) return res.status(400).json({ error: "Invalid row" });
+
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+
+    // Get member_since from Wodify if we have wodify_id
+    let memberSince = null;
+    const { wodify_id } = req.body;
+    if (wodify_id) {
+      try {
+        const clientData = await wodifyGet(API_BASE, `/clients/${wodify_id}`);
+        memberSince = clientData.member_since || null;
+      } catch {}
+    }
+
+    // Calculate next check-in — 30 days if within first 90 days, else 90 days
+    const joined = new Date(memberSince || today);
+    const now = new Date();
+    const daysSinceJoin = Math.round((now - joined) / 86400000);
+    const intervalDays = daysSinceJoin < 90 ? 30 : 90;
+    const next = new Date(today);
+    next.setDate(next.getDate() + intervalDays);
+    const nextCheckin = next.toISOString().slice(0, 10);
+
+    await updateAthlete(rowNumber, { last_checkin: today, next_checkin: nextCheckin });
+    console.log(`[CheckIn] Row ${rowNumber}: ${today} → next ${nextCheckin} (${intervalDays}-day interval)`);
+
+    res.json({ ok: true, last_checkin: today, next_checkin: nextCheckin, interval_days: intervalDays });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
