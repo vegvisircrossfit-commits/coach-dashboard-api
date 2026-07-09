@@ -218,6 +218,30 @@ async function findTodaysClasses(today) {
 // GOOGLE SHEETS
 // ══════════════════════════════════════════════════════════════════════════════
 
+// Convert Excel serial date or various string formats to YYYY-MM-DD
+function toDateStr(val) {
+  if (!val && val !== 0) return '';
+  // Excel serial number
+  if (typeof val === 'number' || (typeof val === 'string' && /^\d{5}$/.test(val.trim()))) {
+    const serial = parseInt(val);
+    if (serial > 40000 && serial < 60000) {
+      const d = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+      return d.toISOString().slice(0, 10);
+    }
+  }
+  // Already a YYYY-MM-DD string
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val.trim())) {
+    return val.trim().slice(0, 10);
+  }
+  // MM/DD/YYYY or similar
+  if (typeof val === 'string' && /\d{1,2}\/\d{1,2}\/\d{4}/.test(val)) {
+    const d = new Date(val);
+    if (!isNaN(d)) return d.toISOString().slice(0, 10);
+  }
+  // Not a recognizable date
+  return '';
+}
+
 const COL = {
   athlete: 0, last_checkin: 1, next_checkin: 2, notes: 3, goals: 4,
   rx: 5, injuries: 6, dos: 7, donts: 8, upcoming: 9,
@@ -282,7 +306,7 @@ function rowToAthlete(row, rowIndex) {
   if (!name) return null;
   return {
     row_number: rowIndex, athlete: name,
-    last_checkin: row[COL.last_checkin], next_checkin: row[COL.next_checkin],
+    last_checkin: toDateStr(row[COL.last_checkin]), next_checkin: toDateStr(row[COL.next_checkin]),
     notes: row[COL.notes], goals: row[COL.goals], rx: row[COL.rx],
     injuries: row[COL.injuries], dos: row[COL.dos], donts: row[COL.donts],
     upcoming: row[COL.upcoming], coach_notes: row[COL.coach_notes],
