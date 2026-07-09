@@ -718,8 +718,8 @@
     var lc = useState(athlete.last_checkin||''); var lastCheckin = lc[0]; var setLastCheckin = lc[1];
     var nc2 = useState(athlete.next_checkin||''); var nextCheckin = nc2[0]; var setNextCheckin = nc2[1];
 
-    var hasAlert = athlete.injuries || (nextCheckin && new Date(nextCheckin) < new Date());
     var checkinOverdue = nextCheckin && new Date(nextCheckin) < new Date();
+    var hasAlert = athlete.injuries || checkinOverdue;
 
     var saveNote = function() {
       setSaving('saving');
@@ -763,7 +763,7 @@
         h('div',{style:{flex:1,minWidth:0}},
           h('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:3}},
             h('span',{style:{fontSize:14,fontWeight:800,letterSpacing:'0.02em'}},athlete.athlete),
-            checkinOverdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',padding:'1px 6px',borderRadius:2}},'Check-in Due'),
+            checkinOverdue&&!checkinStatus&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',padding:'1px 6px',borderRadius:2}},'Check-in Due'),
             athlete.upcoming&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.3)',padding:'1px 6px',borderRadius:2}},'✈ Trip')
           ),
           athlete.injuries
@@ -933,8 +933,8 @@
           h('button',{className:'btn',onClick:function(){setSelectedAthlete(null);},style:{background:C.navy3,color:C.text,padding:'6px 10px',fontWeight:700,fontSize:11,borderRadius:3,border:'1px solid '+C.line}},'← Back'),
           h('div',{style:{flex:1}},
             h('div',{style:{fontSize:20,fontWeight:900,letterSpacing:'0.02em'}},selectedAthlete.athlete),
-            selectedAthlete.next_checkin&&h('div',{style:{fontSize:11,color:new Date(selectedAthlete.next_checkin)<today?'#ef4444':C.textFaint,marginTop:2}},
-              (new Date(selectedAthlete.next_checkin)<today?'⚠ Check-in overdue — ':'Next check-in: ')+selectedAthlete.next_checkin)
+            selectedAthlete.next_checkin&&h('div',{style:{fontSize:11,color:new Date(selectedAthlete.next_checkin)<new Date()?'#ef4444':C.green,marginTop:2}},
+              (new Date(selectedAthlete.next_checkin)<new Date()?'⚠ Check-in overdue — ':'✓ Next check-in: ')+selectedAthlete.next_checkin)
           )
         ),
         h('div',{style:{padding:'16px 20px',flex:1,overflowY:'auto'}},
