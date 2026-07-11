@@ -679,7 +679,6 @@
                       ),
                       h('div',{style:{display:'flex',gap:7,alignItems:'center'}},
                         h('span',{style:{color:C.textFaint,fontSize:12}},isSelected?'▲':'▼'),
-                        h('span',{style:{color:'#555',fontSize:12,cursor:'pointer'},onClick:function(e){e.stopPropagation();if(window.confirm('Delete "'+sop.title+'"?'))deleteSop(key);}},'🗑')
                       )
                     ),
                     !isSelected&&h('div',{style:{fontSize:11,color:C.textFaint,lineHeight:1.5,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}},sop.flow&&sop.flow.summary||sop.summary||'No summary'),
