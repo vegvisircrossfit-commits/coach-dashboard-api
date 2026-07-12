@@ -711,6 +711,18 @@
 
     var checkinOverdue = nextCheckin && new Date(nextCheckin) < new Date();
 
+    // Parse scheduled check-in from coach_notes tag
+    var scheduledCheckin = null;
+    var coachNotesText = athlete.coach_notes || '';
+    var schedMatch = coachNotesText.match(/\[checkin_scheduled:(\d{4}-\d{2}-\d{2})\]/);
+    if (schedMatch) {
+      var schedDate = new Date(schedMatch[1]);
+      schedDate.setHours(0,0,0,0);
+      var todayD = new Date(); todayD.setHours(0,0,0,0);
+      // Only show if scheduled date is in the future or today
+      if (schedDate >= todayD) scheduledCheckin = schedMatch[1];
+    }
+
     // Parse trip status from AI summary
     var tripStatus = null;
     if (athlete.ai_summary) {
@@ -744,6 +756,14 @@
 
     var logCheckin = function() {
       setCheckinStatus('saving');
+      // Also clear the checkin_scheduled tag from coach_notes on the server
+      var cleanedNotes = coachNotesText.replace(/\[checkin_scheduled:[^\]]+\]/g, '').trim();
+      if (cleanedNotes !== coachNotesText) {
+        fetch('https://coach-dashboard-api.onrender.com/athletes/'+athlete.row_number, {
+          method: 'PATCH', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({coach_notes: cleanedNotes})
+        }).catch(function(){});
+      }
       fetch('https://coach-dashboard-api.onrender.com/athletes/'+athlete.row_number+'/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -773,6 +793,7 @@
           h('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:3}},
             h('span',{style:{fontSize:14,fontWeight:800,letterSpacing:'0.02em'}},athlete.athlete),
             checkinOverdue&&!checkinStatus&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',padding:'1px 6px',borderRadius:2}},'Check-in Due'),
+            scheduledCheckin&&!checkinStatus&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#818cf8',background:'rgba(129,140,248,0.1)',border:'1px solid rgba(129,140,248,0.35)',padding:'1px 6px',borderRadius:2}},'📅 Check-in Scheduled: '+scheduledCheckin),
             tripStatus==='away'&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.15)',border:'1px solid rgba(201,168,76,0.4)',padding:'1px 6px',borderRadius:2}},'✈ Currently Away'),
             tripStatus==='returned'&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.green,background:'rgba(79,157,140,0.15)',border:'1px solid rgba(79,157,140,0.4)',padding:'1px 6px',borderRadius:2}},'🔄 Just Returned'),
             !tripStatus&&athlete.upcoming&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.3)',padding:'1px 6px',borderRadius:2}},'✈ Trip Upcoming')
@@ -1010,6 +1031,7 @@
                       h('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:3,flexWrap:'wrap'}},
                         h('span',{style:{fontSize:14,fontWeight:800}},a.athlete),
                         overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',padding:'1px 5px',borderRadius:2}},'Check-in Due'),
+                        (function(){var m=(a.coach_notes||'').match(/\[checkin_scheduled:(\d{4}-\d{2}-\d{2})\]/);if(!m)return null;var sd=new Date(m[1]);sd.setHours(0,0,0,0);var td=new Date();td.setHours(0,0,0,0);if(sd<td)return null;return h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#818cf8',background:'rgba(129,140,248,0.1)',border:'1px solid rgba(129,140,248,0.35)',padding:'1px 5px',borderRadius:2}},'📅 Check-in Sched');})(),
                         (function(){
                           var ts=null;
                           if(a.ai_summary){try{var b=JSON.parse(a.ai_summary);var td=new Date();td.setHours(0,0,0,0);var ts1=b.trip_start?new Date(b.trip_start):null;var te1=b.trip_end?new Date(b.trip_end):null;if(ts1&&te1){if(td>=ts1&&td<=te1)ts='away';else if(td>te1&&(td-te1)/86400000<=7)ts='returned';}else if(ts1&&td>=ts1)ts='away';}catch(e){}}
