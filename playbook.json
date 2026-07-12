@@ -1355,8 +1355,52 @@
       ],
       "source": "text",
       "addedAt": "2026-01-01T00:00:00.000Z"
-    }
   },
+  "sop_emergency_contacts_001": {
+  "title": "Emergency Contacts",
+  "category": "Maintenance",
+  "summary": "Key contacts for gym emergencies including owner, contractor, electrician, and plumber.",
+  "steps": [
+    "Owner — Kidd: (713) 252-3541",
+    "Marcus (Contractor): (346) 733-7385 or (281) 827-8011",
+    "Hugo (Electrician): (832) 687-0587",
+    "Ruben (Plumber): (832) 435-3363"
+  ],
+  "source": "text",
+  "addedAt": "2026-07-12T00:00:00.000Z"
+},
+  "sop_kids_class_structure_001": {
+  "title": "Kids Class Structure",
+  "category": "Coaching",
+  "summary": "Step-by-step class plan for when the main Kids Coach is out. Covers warm-up game, PVC deadlifts, AMRAP workout, wolf game, and handstand practice.",
+  "steps": [
+    "INTRODUCTIONS: Greet every parent and let them know who you are and that you are the coach for today.",
+    "WARM-UP GAME — Flip Cone: Grab the cone stack and toss cones around the floor with some right side up and some right side down. Assign one team to get all cones right side up and the other team to get all cones right side down. Team with the most cones their way at the end wins!",
+    "PVC DEADLIFTS (5 minutes): Take out PVC sticks and spend 5 minutes working on deadlift form. Demo the movement and have the kids move along with you. Focus on improving one thing at a time. Kids will not hurt their backs using a PVC pipe. Weight is earned — if a kid demonstrates perfect form, they can earn the 15 lb silver bar.",
+    "WORKOUT — 8 Minute AMRAP: Take out boxes and set up the following workout: 5 Box Jumps, 5 Toes to Ring (as close as they can get on the low rings), 2 Wall Walks.",
+    "GAME — What's the Time Mr/Ms Wolf: One kid stands at one end of the room as the Wolf. The other kids stand at the opposite end. The group asks 'What time is it Mr/Ms Wolf?' and the Wolf calls out a time (e.g. '5 o'clock'). The group takes that many steps toward the Wolf. They repeat until the Wolf yells 'DINNER TIME!' and then chases the kids. The first kid caught becomes the new Wolf. If no one is caught, the Wolf stays it.",
+    "HANDSTAND PRACTICE: Roll out the 10ft blue tumble mat and have the kids form a line far back from it. Ask each kid if they want to walk up or do a full handstand. Spot them by lightly grabbing their calf. If a kid cannot kick up yet, have them work on the kick-up and spot them through it. Your job is to help them improve and make sure no one flips over.",
+    "CLASS CLOSE: Thank the kids and lead a group closer. Count down: '1, 2, 3… CROSSFIT!!!'"
+  ],
+  "source": "text",
+  "addedAt": "2026-07-12T00:00:00.000Z"
+  }, 
+    "sop_wod_edit_001": {
+  "title": "Something Missing or Wrong on Today's WOD",
+  "category": "Coaching",
+  "summary": "How to fix an error or missing content on today's WOD in Wodify and notify the team.",
+  "steps": [
+    "Go to app.wodify.com and log in using your credentials.",
+    "Go to Daily WODs.",
+    "Hit the pencil icon on the section you wish to change.",
+    "Make the necessary changes using your best coaching judgment — most likely this will be a fix to the warm-up.",
+    "Hit Save.",
+    "Reload your WOD dashboard on the class display iPad.",
+    "Let the team know what changes you made and why in the Coach group chat."
+  ],
+  "source": "text",
+  "addedAt": "2026-07-12T00:00:00.000Z"
+}
   "lastUpdated": "2026-07-07T00:00:00.000Z",
   "version": 2
 }
