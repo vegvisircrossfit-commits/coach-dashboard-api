@@ -710,6 +710,10 @@
     var nc2 = useState(athlete.next_checkin||''); var nextCheckin = nc2[0]; var setNextCheckin = nc2[1];
 
     var checkinOverdue = nextCheckin && new Date(nextCheckin) < new Date();
+    var isCancelled = (athlete.coach_notes||'').includes('[cancelled');
+    var ds = useState(null); var deleteStatus = ds[0]; var setDeleteStatus = ds[1];
+    var sp = useState(false); var showPinPrompt = sp[0]; var setShowPinPrompt = sp[1];
+    var pi = useState(''); var pinInput = pi[0]; var setPinInput = pi[1];
 
     // Parse scheduled check-in from coach_notes tag
     var scheduledCheckin = null;
@@ -740,7 +744,23 @@
       } catch(e) {}
     }
 
-    var hasAlert = athlete.injuries || checkinOverdue || tripStatus === 'away';
+    var hasAlert = athlete.injuries || checkinOverdue || tripStatus === 'away' || isCancelled;
+
+    var deleteAthlete = function(pin) {
+      setDeleteStatus('deleting');
+      fetch('https://coach-dashboard-api.onrender.com/athletes/'+athlete.row_number, {
+        method: 'DELETE',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({pin: pin})
+      })
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.ok) { setDeleteStatus('deleted'); if(props.onDelete) props.onDelete(athlete.row_number); }
+        else if(d.error==='Invalid PIN') { setDeleteStatus('wrongpin'); setPinInput(''); }
+        else setDeleteStatus('error');
+      })
+      .catch(function(){setDeleteStatus('error');});
+    };
 
     var saveNote = function() {
       setSaving('saving');
@@ -793,6 +813,7 @@
           h('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:3}},
             h('span',{style:{fontSize:14,fontWeight:800,letterSpacing:'0.02em'}},athlete.athlete),
             checkinOverdue&&!checkinStatus&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',padding:'1px 6px',borderRadius:2}},'Check-in Due'),
+            isCancelled&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.15)',border:'1px solid rgba(239,68,68,0.5)',padding:'1px 6px',borderRadius:2}},'⚠ Cancelled'),
             scheduledCheckin&&!checkinStatus&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#818cf8',background:'rgba(129,140,248,0.1)',border:'1px solid rgba(129,140,248,0.35)',padding:'1px 6px',borderRadius:2}},'📅 Check-in Scheduled: '+scheduledCheckin),
             tripStatus==='away'&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.15)',border:'1px solid rgba(201,168,76,0.4)',padding:'1px 6px',borderRadius:2}},'✈ Currently Away'),
             tripStatus==='returned'&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.green,background:'rgba(79,157,140,0.15)',border:'1px solid rgba(79,157,140,0.4)',padding:'1px 6px',borderRadius:2}},'🔄 Just Returned'),
@@ -872,6 +893,32 @@
                 )
               )
             : h('div',{style:{fontSize:12,color:C.textDim,lineHeight:1.6,whiteSpace:'pre-wrap'}},noteContent||h('em',{style:{color:C.textFaint}},'No coach notes yet.'))
+        ),
+
+        // Delete section — only show for cancelled athletes
+        isCancelled&&athlete.row_number&&h('div',{style:{marginTop:16,paddingTop:14,borderTop:'1px solid rgba(239,68,68,0.2)'}},
+          deleteStatus==='deleted'
+            ? h('div',{style:{fontSize:12,color:C.green}},'✓ Removed from Sheet')
+            : showPinPrompt
+              ? h('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
+                  h('input',{type:'password',placeholder:'Enter admin PIN',value:pinInput,
+                    onChange:function(e){setPinInput(e.target.value);},
+                    onKeyDown:function(e){if(e.key==='Enter')deleteAthlete(pinInput);},
+                    style:{width:160,fontSize:12}}),
+                  h('button',{className:'btn',onClick:function(){deleteAthlete(pinInput);},
+                    disabled:deleteStatus==='deleting',
+                    style:{background:'#ef4444',color:'#fff',padding:'6px 12px',fontWeight:700,fontSize:11,borderRadius:3}},
+                    deleteStatus==='deleting'?'Removing…':'Confirm Remove'),
+                  h('button',{className:'btn',onClick:function(){setShowPinPrompt(false);setPinInput('');setDeleteStatus(null);},
+                    style:{background:'none',color:C.textFaint,padding:'6px 10px',fontWeight:700,fontSize:11,borderRadius:3,border:'1px solid '+C.line}},'Cancel'),
+                  deleteStatus==='wrongpin'&&h('span',{style:{fontSize:11,color:'#ef4444'}},'Wrong PIN')
+                )
+              : h('div',{style:{display:'flex',alignItems:'center',gap:10}},
+                  h('div',{style:{fontSize:11,color:'#ef4444'}},'⚠ Member has been marked as cancelled'),
+                  h('button',{className:'btn',onClick:function(){setShowPinPrompt(true);},
+                    style:{background:'rgba(239,68,68,0.1)',color:'#ef4444',padding:'5px 12px',fontWeight:700,fontSize:11,borderRadius:3,border:'1px solid rgba(239,68,68,0.3)'}},
+                    '🗑 Remove from Sheet')
+                )
         )
       )
     );
@@ -905,6 +952,11 @@
     },[]);
 
     useEffect(function(){loadAthletes();},[loadAthletes]);
+
+    var handleDelete = function(rowNumber) {
+      setAllAthletes(function(prev){ return prev.filter(function(a){ return a.row_number !== rowNumber; }); });
+      setSelectedAthlete(null);
+    };
 
     var handleCheckin = function(rowNumber, lastCheckin, nextCheckin) {
       setAllAthletes(function(prev){
@@ -970,7 +1022,7 @@
           )
         ),
         h('div',{style:{padding:'16px 20px',flex:1,overflowY:'auto'}},
-          h(AthleteCard,{athlete:selectedAthlete,onSaveNote:handleSaveNote,onCheckin:handleCheckin,forceExpanded:true})
+          h(AthleteCard,{athlete:selectedAthlete,onSaveNote:handleSaveNote,onCheckin:handleCheckin,onDelete:handleDelete,forceExpanded:true})
         )
       );
     }
@@ -1030,7 +1082,8 @@
                     h('div',{style:{flex:1,minWidth:0}},
                       h('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:3,flexWrap:'wrap'}},
                         h('span',{style:{fontSize:14,fontWeight:800}},a.athlete),
-                        overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',padding:'1px 5px',borderRadius:2}},'Check-in Due'),
+                                                (a.coach_notes||'').includes('[cancelled')&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.15)',border:'1px solid rgba(239,68,68,0.5)',padding:'1px 5px',borderRadius:2}},'⚠ Cancelled'),
+overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#ef4444',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',padding:'1px 5px',borderRadius:2}},'Check-in Due'),
                         (function(){var m=(a.coach_notes||'').match(/\[checkin_scheduled:(\d{4}-\d{2}-\d{2})\]/);if(!m)return null;var sd=new Date(m[1]);sd.setHours(0,0,0,0);var td=new Date();td.setHours(0,0,0,0);if(sd<td)return null;return h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#818cf8',background:'rgba(129,140,248,0.1)',border:'1px solid rgba(129,140,248,0.35)',padding:'1px 5px',borderRadius:2}},'📅 Check-in Sched');})(),
                         (function(){
                           var ts=null;
