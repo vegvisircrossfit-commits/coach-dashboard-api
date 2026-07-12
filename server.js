@@ -550,6 +550,58 @@ IMPORTANT: "upcoming" is ONLY for travel, trips, vacations, or planned absences 
   console.log(`Processed new athlete: ${parsed.athlete}`);
 }
 
+function detectCancellation(text) {
+  return /cancel|cancell|leaving|left the gym|last day|ended their|dropping|quit|no longer a member/i.test(text);
+}
+
+async function handleBatchCancellation(text, channel, thread_ts) {
+  // Ask Claude to extract a list of names from the cancellation post
+  const system = `Extract a list of member names from a gym cancellation notice.
+Return ONLY valid JSON, no markdown.
+Format: {"names": ["Full Name", "Full Name"]}
+Only include names of people who are cancelling/leaving. If no clear names found, return {"names": []}.`;
+  const raw = await callClaude(system, `Extract cancelling member names from this post:\n\n${text}`);
+  const parsed = parseJSON(raw);
+  if (!parsed?.names?.length) {
+    console.log('[Cancellation] No names found in batch post');
+    return;
+  }
+
+  const athletes = await getAllAthletes();
+  const tagged = [];
+  const notFound = [];
+
+  for (const name of parsed.names) {
+    // Try exact then fuzzy
+    let match = athletes.find(a => a.athlete.toLowerCase() === name.toLowerCase());
+    if (!match) {
+      const firstName = name.split(' ')[0].toLowerCase();
+      const candidates = athletes.filter(a => a.athlete.toLowerCase().split(' ')[0] === firstName);
+      if (candidates.length === 1) match = candidates[0];
+    }
+    if (match) {
+      // Add [cancelled] tag to coach_notes
+      const prev = match.coach_notes || '';
+      if (!prev.includes('[cancelled]')) {
+        const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+        const newNotes = prev ? `${prev}\n[cancelled:${date}]` : `[cancelled:${date}]`;
+        await updateAthlete(match.row_number, { coach_notes: newNotes });
+        tagged.push(match.athlete);
+        console.log(`[Cancellation] Tagged: ${match.athlete}`);
+      }
+    } else {
+      notFound.push(name);
+    }
+  }
+
+  if (channel) {
+    let reply = `✓ Marked ${tagged.length} member(s) as cancelled in the app:\n${tagged.map(n => `• ${n}`).join('\n')}`;
+    if (notFound.length) reply += `\n\nCould not find: ${notFound.join(', ')} — check spelling or add last name.`;
+    reply += '\n\nReview and remove from the Sheet using the app dashboard (PIN required).';
+    await sendSlackMessage(channel, reply, thread_ts);
+  }
+}
+
 function detectCheckin(text) {
   // Detect check-in mentions in coach messages
   return /check.?in|goal.?review|90.?day|30.?day/i.test(text);
@@ -669,7 +721,15 @@ app.post("/slack/events", async (req, res) => {
   if (event.type !== "message" || event.bot_id || !event.text) return;
   try {
     if (event.channel === NEW_ATHLETES_CHANNEL && event.text.toLowerCase().includes("new athlete")) await handleNewAthlete(event.text.trim());
-    else if (event.channel === CURRENT_ATHLETES_CHANNEL) await handleAthleteUpdate(event.text.trim(), event.channel, event.thread_ts || event.ts);
+    else if (event.channel === CURRENT_ATHLETES_CHANNEL) {
+      const txt = event.text.trim();
+      const ts = event.thread_ts || event.ts;
+      if (detectCancellation(txt) && txt.length > 40) {
+        await handleBatchCancellation(txt, event.channel, ts);
+      } else {
+        await handleAthleteUpdate(txt, event.channel, ts);
+      }
+    }
   } catch (err) { console.error("Slack error:", err.message); }
 });
 
@@ -1108,6 +1168,22 @@ app.get("/admin/sync-checkins", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Delete athlete row from Sheet (PIN protected)
+app.delete("/athletes/:rowNumber", async (req, res) => {
+  try {
+    const { pin } = req.body;
+    if (pin !== (process.env.PLAYBOOK_PIN || "vegvisir2026")) return res.status(403).json({ error: "Invalid PIN" });
+    const rowNumber = parseInt(req.params.rowNumber);
+    if (isNaN(rowNumber) || rowNumber < 3) return res.status(400).json({ error: "Invalid row" });
+    const token = await getGoogleToken();
+    // Clear the entire row
+    const ranges = "ABCDEFGHIJKLMN".split('').map(col => `Sheet1!${col}${rowNumber}`);
+    await sheetsBatchUpdate(ranges.map(range => ({ range, values: [['']] })));
+    console.log(`[Delete] Row ${rowNumber} cleared`);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); startCheckinCron(); });
