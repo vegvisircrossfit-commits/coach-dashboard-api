@@ -329,6 +329,28 @@ async function findAthlete(name, wodifyId) {
   return null;
 }
 
+async function findAthletesByFirstName(firstName) {
+  const athletes = await getAllAthletes();
+  const lower = firstName.toLowerCase().trim();
+  return athletes.filter(a => {
+    const parts = a.athlete.toLowerCase().split(' ');
+    return parts[0] === lower;
+  });
+}
+
+async function findAthleteByNameFuzzy(name) {
+  // Try exact match first
+  const exact = await findAthlete(name);
+  if (exact) return { match: exact, ambiguous: false, candidates: [] };
+
+  // Try first name only match
+  const firstName = name.trim().split(' ')[0];
+  const candidates = await findAthletesByFirstName(firstName);
+  if (candidates.length === 1) return { match: candidates[0], ambiguous: false, candidates: [] };
+  if (candidates.length > 1) return { match: null, ambiguous: true, candidates };
+  return { match: null, ambiguous: false, candidates: [] };
+}
+
 async function updateAthlete(rowNumber, fields) {
   const now = new Date().toLocaleString("en-US", { timeZone: "America/Chicago" });
   fields.last_updated = now;
@@ -468,6 +490,31 @@ function startRosterCron() {
 // SLACK
 // ══════════════════════════════════════════════════════════════════════════════
 
+// In-memory store for pending disambiguations
+// { [channelId_threadTs]: { athletes: [...], parsed: {...}, text: string, expiresAt: number } }
+const pendingDisambiguations = {};
+
+// Clean up expired disambiguations every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  Object.keys(pendingDisambiguations).forEach(k => {
+    if (pendingDisambiguations[k].expiresAt < now) delete pendingDisambiguations[k];
+  });
+}, 600000);
+
+async function sendSlackMessage(channel, text, thread_ts) {
+  const body = { channel, text };
+  if (thread_ts) body.thread_ts = thread_ts;
+  const resp = await fetch('https://slack.com/api/chat.postMessage', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${SLACK_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await resp.json();
+  if (!data.ok) console.error('[Slack] Failed to send message:', data.error);
+  return data;
+}
+
 function verifySlackSignature(req) {
   if (!SLACK_SIGNING_SECRET) return true;
   const timestamp = req.headers["x-slack-request-timestamp"];
@@ -519,8 +566,63 @@ function calcNextCheckinDate(lastDate, memberSince) {
   return { nextCheckin: next.toISOString().slice(0, 10), intervalDays };
 }
 
-async function handleAthleteUpdate(text) {
+async function applyAthleteUpdate(existing, parsed) {
+  const fields = {};
+  ["injuries","upcoming","dos","donts"].forEach(k => { if (parsed[k]) fields[k] = parsed[k]; });
+  if (parsed.coach_notes) {
+    const date = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+    const prev = existing.coach_notes || "";
+    const cleanedPrev = prev.replace(/\[checkin_scheduled:[^\]]+\]/g, '').trim();
+    fields.coach_notes = cleanedPrev ? `${cleanedPrev}\n[${date}] ${parsed.coach_notes}` : `[${date}] ${parsed.coach_notes}`;
+  }
+  if (parsed.checkin_scheduled) {
+    const base = fields.coach_notes || existing.coach_notes || '';
+    const cleaned = base.replace(/\[checkin_scheduled:[^\]]+\]/g, '').trim();
+    fields.coach_notes = cleaned ? `${cleaned}\n[checkin_scheduled:${parsed.checkin_scheduled}]` : `[checkin_scheduled:${parsed.checkin_scheduled}]`;
+    console.log(`[CheckIn Scheduled] ${existing.athlete}: ${parsed.checkin_scheduled}`);
+  }
+  if (detectCheckin(parsed.coach_notes || '')) {
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+    let memberSince = null;
+    if (existing.wodify_id) {
+      try { const cd = await wodifyGet(API_BASE, `/clients/${existing.wodify_id}`); memberSince = cd.member_since || null; } catch {}
+    }
+    const { nextCheckin, intervalDays } = calcNextCheckinDate(today, memberSince);
+    fields.last_checkin = today;
+    fields.next_checkin = nextCheckin;
+    // Clear scheduled tag since check-in is now done
+    if (fields.coach_notes) fields.coach_notes = fields.coach_notes.replace(/\[checkin_scheduled:[^\]]+\]/g, '').trim();
+    console.log(`[CheckIn] ${existing.athlete}: ${today} → ${nextCheckin} (${intervalDays}-day)`);
+  }
+  if (Object.keys(fields).length) {
+    await updateAthlete(existing.row_number, fields);
+    await generateAndCacheSummary({ ...existing, ...fields });
+  }
+  console.log(`Updated athlete: ${existing.athlete}`);
+}
+
+async function handleAthleteUpdate(text, channel, thread_ts) {
   if (!looksLikeAthleteMessage(text)) { console.log(`[Slack] Skipping: "${text.slice(0,40)}"`); return; }
+
+  // Check if this is a disambiguation reply (just a number)
+  const numMatch = text.trim().match(/^([1-9])$/);
+  if (numMatch && channel) {
+    const key = `${channel}_${thread_ts}`;
+    const pending = pendingDisambiguations[key];
+    if (pending) {
+      const idx = parseInt(numMatch[1]) - 1;
+      if (idx >= 0 && idx < pending.candidates.length) {
+        const chosen = pending.candidates[idx];
+        delete pendingDisambiguations[key];
+        await applyAthleteUpdate(chosen, pending.parsed);
+        await sendSlackMessage(channel, `✓ Got it — updated ${chosen.athlete}.`, thread_ts);
+      } else {
+        await sendSlackMessage(channel, `Please reply with a number between 1 and ${pending.candidates.length}.`, thread_ts);
+      }
+      return;
+    }
+  }
+
   const system = `Extract athlete update from CrossFit coach notes. Athlete name is first.
 Return ONLY valid JSON, no markdown.
 Format: {"athlete":"Full Name","injuries":null,"upcoming":null,"dos":null,"donts":null,"checkin_scheduled":null,"coach_notes":"full summary"}
@@ -531,54 +633,27 @@ IMPORTANT:
   const raw = await callClaude(system, `Parse this update:\n\n${text}`);
   const parsed = parseJSON(raw);
   if (!parsed?.athlete) { console.log("Could not parse athlete name"); return; }
-  const existing = await findAthlete(parsed.athlete);
-  if (!existing) {
+
+  // Fuzzy match — handle ambiguous first names
+  const { match, ambiguous, candidates } = await findAthleteByNameFuzzy(parsed.athlete);
+
+  if (ambiguous && channel) {
+    // Store pending disambiguation
+    const key = `${channel}_${thread_ts || Date.now()}`;
+    pendingDisambiguations[key] = { candidates, parsed, text, expiresAt: Date.now() + 3600000 };
+    const list = candidates.map((a, i) => `${i+1}. ${a.athlete}`).join('\n');
+    await sendSlackMessage(channel, `Which ${parsed.athlete.split(' ')[0]}? Reply with the number:\n${list}`, thread_ts);
+    return;
+  }
+
+  if (!match) {
     await addAthlete({ athlete: parsed.athlete, coach_notes: parsed.coach_notes || text });
     const newAthlete = await findAthlete(parsed.athlete);
     if (newAthlete) await generateAndCacheSummary(newAthlete);
+    console.log(`Added new athlete: ${parsed.athlete}`);
     return;
   }
-  const fields = {};
-  ["injuries","upcoming","dos","donts"].forEach(k => { if (parsed[k]) fields[k] = parsed[k]; });
-  if (parsed.coach_notes) {
-    const date = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
-    const prev = existing.coach_notes || "";
-    fields.coach_notes = prev ? `${prev}\n[${date}] ${parsed.coach_notes}` : `[${date}] ${parsed.coach_notes}`;
-  }
-
-  // Save scheduled check-in date if detected
-  if (parsed.checkin_scheduled) {
-    fields.coach_notes = (fields.coach_notes || (existing.coach_notes || ''));
-    // Store as a special tag that the app can read
-    const existingNotes = fields.coach_notes || existing.coach_notes || '';
-    // Remove any previous checkin_scheduled tag
-    const cleanedNotes = existingNotes.replace(/\[checkin_scheduled:[^\]]+\]/g, '').trim();
-    fields.coach_notes = cleanedNotes ? cleanedNotes + `\n[checkin_scheduled:${parsed.checkin_scheduled}]` : `[checkin_scheduled:${parsed.checkin_scheduled}]`;
-    console.log(`[CheckIn Scheduled] ${parsed.athlete}: scheduled for ${parsed.checkin_scheduled}`);
-  }
-
-  // Auto-update check-in dates if message mentions a completed check-in
-  if (detectCheckin(text)) {
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
-    // Try to get member_since from Wodify if we have a wodify_id
-    let memberSince = null;
-    if (existing.wodify_id) {
-      try {
-        const clientData = await wodifyGet(API_BASE, `/clients/${existing.wodify_id}`);
-        memberSince = clientData.member_since || null;
-      } catch {}
-    }
-    const { nextCheckin, intervalDays } = calcNextCheckinDate(today, memberSince);
-    fields.last_checkin = today;
-    fields.next_checkin = nextCheckin;
-    console.log(`[CheckIn] ${parsed.athlete}: logged ${today}, next ${nextCheckin} (${intervalDays}-day interval)`);
-  }
-
-  if (Object.keys(fields).length) {
-    await updateAthlete(existing.row_number, fields);
-    await generateAndCacheSummary({ ...existing, ...fields });
-  }
-  console.log(`Updated athlete: ${parsed.athlete}`);
+  await applyAthleteUpdate(match, parsed);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -594,7 +669,7 @@ app.post("/slack/events", async (req, res) => {
   if (event.type !== "message" || event.bot_id || !event.text) return;
   try {
     if (event.channel === NEW_ATHLETES_CHANNEL && event.text.toLowerCase().includes("new athlete")) await handleNewAthlete(event.text.trim());
-    else if (event.channel === CURRENT_ATHLETES_CHANNEL) await handleAthleteUpdate(event.text.trim());
+    else if (event.channel === CURRENT_ATHLETES_CHANNEL) await handleAthleteUpdate(event.text.trim(), event.channel, event.thread_ts || event.ts);
   } catch (err) { console.error("Slack error:", err.message); }
 });
 
