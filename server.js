@@ -523,9 +523,11 @@ async function handleAthleteUpdate(text) {
   if (!looksLikeAthleteMessage(text)) { console.log(`[Slack] Skipping: "${text.slice(0,40)}"`); return; }
   const system = `Extract athlete update from CrossFit coach notes. Athlete name is first.
 Return ONLY valid JSON, no markdown.
-Format: {"athlete":"Full Name","injuries":null,"upcoming":null,"dos":null,"donts":null,"coach_notes":"full summary"}
+Format: {"athlete":"Full Name","injuries":null,"upcoming":null,"dos":null,"donts":null,"checkin_scheduled":null,"coach_notes":"full summary"}
 Use null for fields not mentioned.
-IMPORTANT: "upcoming" is ONLY for travel, trips, vacations, or planned absences from the gym (e.g. "going to Austin", "out of town next week", "missing class for vacation"). Do NOT put start dates, first class dates, or check-in dates in "upcoming".`;
+IMPORTANT:
+- "upcoming" is ONLY for travel, trips, vacations, or planned absences from the gym. Do NOT put start dates, first class dates, or check-in dates here.
+- "checkin_scheduled" is ONLY for a scheduled check-in appointment date (e.g. "check-in scheduled for July 15" → "2026-07-15", "goal review next Tuesday" → date). Use YYYY-MM-DD format. Use null if no check-in is scheduled.`;
   const raw = await callClaude(system, `Parse this update:\n\n${text}`);
   const parsed = parseJSON(raw);
   if (!parsed?.athlete) { console.log("Could not parse athlete name"); return; }
@@ -544,7 +546,18 @@ IMPORTANT: "upcoming" is ONLY for travel, trips, vacations, or planned absences 
     fields.coach_notes = prev ? `${prev}\n[${date}] ${parsed.coach_notes}` : `[${date}] ${parsed.coach_notes}`;
   }
 
-  // Auto-update check-in dates if message mentions a check-in
+  // Save scheduled check-in date if detected
+  if (parsed.checkin_scheduled) {
+    fields.coach_notes = (fields.coach_notes || (existing.coach_notes || ''));
+    // Store as a special tag that the app can read
+    const existingNotes = fields.coach_notes || existing.coach_notes || '';
+    // Remove any previous checkin_scheduled tag
+    const cleanedNotes = existingNotes.replace(/\[checkin_scheduled:[^\]]+\]/g, '').trim();
+    fields.coach_notes = cleanedNotes ? cleanedNotes + `\n[checkin_scheduled:${parsed.checkin_scheduled}]` : `[checkin_scheduled:${parsed.checkin_scheduled}]`;
+    console.log(`[CheckIn Scheduled] ${parsed.athlete}: scheduled for ${parsed.checkin_scheduled}`);
+  }
+
+  // Auto-update check-in dates if message mentions a completed check-in
   if (detectCheckin(text)) {
     const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
     // Try to get member_since from Wodify if we have a wodify_id
