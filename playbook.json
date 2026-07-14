@@ -1441,8 +1441,62 @@
       ],
       "source": "text",
       "addedAt": "2026-07-12T00:00:00.000Z"
+    },
+    "sop_membership_exchange_001": {
+      "title": "Membership Exchange \u2014 Mitigating a Bad Experience",
+      "category": "Sales & Member Ops",
+      "summary": "When a member is leaving due to a bad group class experience, exchange the remaining value of their membership for personal training sessions and drop-in classes so they leave on a positive note.",
+      "steps": [
+        "This applies when a member is leaving because group classes were not the right fit. Instead of letting remaining membership value go to waste, exchange it for higher-value personal training and drop-in classes.",
+        "Calculate the remaining value on their membership. Example: Unlimited membership at $239/mo, 30 days notice given, next charge is on the 1st and there are 15 days left \u2014 that is approximately $120 in remaining value.",
+        "Look at the personal training menu and find options that match that remaining value. Example: one 45-minute PT session ($85) plus drop-in classes at $30 each to fill the remaining balance.",
+        "Make the adjustments directly to their account in Wodify \u2014 add the PT session(s) and drop-in credits so they have access to them.",
+        "Set all of it to expire on their last day as a member. If that means backdating the start date, do so.",
+        "Let them know they have these credits available and that they need to schedule their personal training appointment before everything expires.",
+        "If they have a preferred coach, ask who that is and share that coach's availability so they can get it booked right away.",
+        "This exchange gives them something of higher perceived value and a more personalized experience \u2014 which is what they were missing in group class. The goal is for them to leave with a positive impression of Vegvisir."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-14T00:00:00.000Z"
+    },
+    "sop_add_to_glm_001": {
+      "title": "Adding Someone to Gym Lead Machine",
+      "category": "Sales & Member Ops",
+      "summary": "How to manually add a contact to Gym Lead Machine using info from Wodify or another source.",
+      "steps": [
+        "You should already have their info from Wodify or from however you obtained their contact. At minimum you need their email and phone number.",
+        "Open Gym Lead Machine.",
+        "Tap the icon all the way to the right \u2014 this is Apps.",
+        "Tap Contacts.",
+        "Tap the + symbol at the bottom.",
+        "Tap Add Contact.",
+        "Enter their first name, last name (if you have it), email, and phone number.",
+        "Hit Save.",
+        "Their account is now created in Gym Lead Machine."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-14T00:00:00.000Z"
+    },
+    "sop_trash_can_batteries_001": {
+      "title": "Trash Can Not Opening \u2014 Battery Fix",
+      "category": "Cleaning & Supplies",
+      "summary": "If the automatic trash can lid won't open, the batteries are likely dead. Replace with 4 AA batteries from the supply closet. If still not opening after replacement, hold the sensor button for 3 seconds to reset.",
+      "steps": [
+        "If the automatic trash can lid is not opening, the batteries are most likely dead.",
+        "Remove the lid from the trash can.",
+        "Locate the battery pack inside \u2014 it will be set to Lock. Switch it to Unlock and open it.",
+        "You need 4 AA batteries. Go to the supply closet and find the battery shelf on the 3rd shelf from the bottom, all the way to the right.",
+        "Grab a plastic pack of 4 AA batteries.",
+        "Open the pack and insert all 4 batteries following the diagram inside the battery pack.",
+        "Close the battery pack, lock it back up, and put the lid back on the trash can.",
+        "Wave your hand over the sensor to test it.",
+        "If it is still not opening after the battery replacement: hold down the small sensor icon on the right side for 3 seconds. This resets it. Then wave your hand again \u2014 it should open normally.",
+        "Note: this reset is usually needed because a kid held the sensor down too long and accidentally locked it out."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-14T00:00:00.000Z"
     }
   },
-  "lastUpdated": "2026-07-12T00:00:00.000Z",
+  "lastUpdated": "2026-07-14T00:00:00.000Z",
   "version": 2
 }
