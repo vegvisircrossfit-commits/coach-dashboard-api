@@ -1495,6 +1495,43 @@
       ],
       "source": "text",
       "addedAt": "2026-07-14T00:00:00.000Z"
+    },
+    "sop_group_membership_001": {
+      "title": "Creating a Group Training Membership \u2014 Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "How to set up a CrossFit group class membership in Wodify. Used for members completing on-ramp, experienced CrossFitters joining from another gym, or any combination.",
+      "steps": [
+        "This membership is used when: a member has completed their on-ramp, someone is joining from another CrossFit gym with existing experience, or any combination of those situations. Everyone ends up needing a group training membership.",
+        "Go to app.wodify.com and log in with your admin username and password.",
+        "Go to People, then Athletes.",
+        "Type in the member's name and open their account.",
+        "Tap Add Membership.",
+        "Select the membership tier they agreed to \u2014 Unlimited, 3x per week, 2x per week, etc.",
+        "Set the start date to match what they need. This date becomes their billing date going forward unless a hold is placed, in which case the billing date will shift.",
+        "Walk through the membership agreement with them: they agree to auto-renew, they agree to 30 days notice for cancellations, and they agree to 30 days notice for holds. Make sure they understand each of these before initialing.",
+        "Have them initial each section and sign the agreement.",
+        "Check if payment is already on file. If not, have them enter their payment info \u2014 credit and debit cards only, no bank accounts accepted.",
+        "Once everything is signed and payment is confirmed, they are good to go.",
+        "If they have not used the Wodify app before, walk them through how to use it before they leave.",
+        "Send them off with a great day!"
+      ],
+      "source": "text",
+      "addedAt": "2026-07-14T00:00:00.000Z"
+    },
+    "sop_remote_signup_001": {
+      "title": "Remote Sign-Up \u2014 When Member Is Not In Person",
+      "category": "Sales & Member Ops",
+      "summary": "How to sign someone up remotely when they are not in person. Create their membership in Wodify (agreements send automatically), send the waiver, then send the copy-paste text below to walk them through their 3 emails.",
+      "steps": [
+        "Create their membership in Wodify \u2014 make the Personal Training membership first. The agreement will be sent to them automatically via email.",
+        "Also send over the gym waiver separately.",
+        "Send them the following text message:\n\nHey FIRST NAME, here are the next things you should see in your inbox \u2014 there are 3 emails.\n\nThe first email is your agreement. Go ahead and look everything over, sign it, and upload your payment information there.\n\nThe second is a waiver to sign. Please sign the waiver before your first workout with us \u2014 it is just agreeing to standard Texas liability and release for a gym.\n\nThe third email is your welcome to Vegvisir email. In that email you will find your welcome packet and be able to download the Wodify app.\n\nWhen you get a chance, let me know when you would like your first personal training session and we will get that scheduled. Other than that, let me know if you have any questions. Welcome to the Vegvisir family \u2014 we cannot wait to train with you!",
+        "Check back in about an hour to see if everything has been completed.",
+        "If they have not completed everything by the time of their first session: alert the coach they are meeting and let them know the member still needs to sign their agreements. The member can sign everything when they come in.",
+        "Respond to any questions they have as they fill things out. Be straightforward and honest. If you are unsure about something, ask a manager."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-14T00:00:00.000Z"
     }
   },
   "lastUpdated": "2026-07-14T00:00:00.000Z",
