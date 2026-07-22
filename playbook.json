@@ -1,5 +1,35 @@
 {
   "sops": {
+    "sop_three_values_001": {
+      "title": "Our 3 Core Values \u2014 Humble, Hungry, Human Smart",
+      "category": "Coaching",
+      "summary": "The 3 values every Vegvisir athlete and coach must embody. If someone does not align with these, something will feel off and we need to address it quickly.",
+      "steps": [
+        "HUMBLE: A humble person is curious and willing to do what it takes for the whole team to succeed. They do not think they have all the answers. They are competent and know what they know, and they ask questions when they do not. When the team needs something, they take care of it so the team can succeed. If someone waits for others to handle things or thinks they know everything, Vegvisir is probably not the right space for them.",
+        "HUNGRY: A hungry person wants to grow and looks for growth at every opportunity. They accept feedback and criticism, and they give poignant feedback and criticism by being humble first and then looking for the best answer to help the person across from them. They are driven to help others and constantly look to improve \u2014 through more education, asking for feedback, or helping others grow. In the beginning this may need to be encouraged, but eventually it should come naturally.",
+        "HUMAN SMART: A human smart person approaches every situation trying to help the person across from them. It is never about you \u2014 it is always about helping them in a way that helps the Vegvisir family grow and become better. If someone is having a bad day, respond with a nurturing tone. If they are having a great day, respond with a supportive tone. You are always trying to figure out the best way to help somebody at all times.",
+        "WHY THESE VALUES: Every human that holds these values will feel like they belong at Vegvisir and will help move us closer to our mission and vision. If someone does not have these values, something will feel off \u2014 and we need to figure out what that is quickly so we can either get that person's head in the right direction or help them find a crew that suits them better."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_how_to_make_sop_001": {
+      "title": "How to Make a New SOP",
+      "category": "Coaching",
+      "summary": "If something in the gym is not covered by an existing SOP, solve it, record yourself doing it step by step, and email the voice memo to Kidd at vegvisircrossfit.com.",
+      "steps": [
+        "If something in the gym is not covered by an existing SOP in the Coach Board app, make a solution for the problem first.",
+        "Grab the gym phone and open Voice Memos.",
+        "Hit Record and narrate every step out loud as you do it \u2014 speak clearly enough that a 5-year-old could follow along.",
+        "Once you have completed the task step by step, hit Stop on the voice memo.",
+        "Title the recording with what the SOP is for, and put 'SOP' at the end of the title.",
+        "Email the voice memo file to: kidd@vegvisircrossfit.com (V-E-G-V-I-S-I-R C-R-O-S-S-F-I-T dot com, KIDD).",
+        "In the subject line write: 'New SOP For [name of the SOP]'.",
+        "Kidd will review it and add it to the playbook if it needs to be there."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
     "sop_temp_001": {
       "title": "Gym Temperature Management",
       "category": "Maintenance",
@@ -1532,8 +1562,298 @@
       ],
       "source": "text",
       "addedAt": "2026-07-14T00:00:00.000Z"
+    },
+    "sop_sales_avatars_001": {
+      "title": "The 5 Sales Avatars \u2014 Who Walks Through Our Door",
+      "category": "Sales & Member Ops",
+      "summary": "The 5 most common prospect types at Vegvisir, what they need to know, their usual objections, and how to overcome them.",
+      "steps": [
+        "AVATAR 1 \u2014 Financially Conscious but Highly Motivated: This person has researched us heavily \u2014 seen the website, Instagram, maybe an ad. They are excited but budget-constrained (grad student, just changed jobs, living with parents, etc.). They need to know exactly how we can help them specifically. Learn their goals and anchor all value to those goals. Recommend more PT than they expect. Their objection will be price. Response: 'Could you afford the regular monthly rate? Great \u2014 in this first month we are asking for a little more investment. In our experience this takes people from staying 7 months to 31+ months. At a bare minimum we need 4 PT sessions \u2014 how does our $499 one PT / two CrossFit class package sound?' Once you give the price, go quiet. Whoever speaks first usually loses. If they still object, bring it back to their stated goals: 'You said you want to lose weight and you are really motivated. I would hate for us to stop because of an extra $200. Let's invest upfront and get you the results you want \u2014 and if you do not see them, come talk to me and I will make it right.'",
+        "AVATAR 2 \u2014 The Person Who Knows What They Want: They know they want PT and group classes. They just need to know we can help them. Attach your pitch to past success stories of similar people. Their usual objection: they want to skip straight to group classes but have not done CrossFit. Remind them this journey can be dangerous without on-ramp. Say: 'We have helped over 1,000 people and learned that without on-ramp, the journey does not stick. Even if you end up hating this gym, you will leave knowing how to do a clean and snatch safely. We have had experienced athletes go through on-ramp and gain a ton from it.'",
+        "AVATAR 3 \u2014 The Social Butterfly: They want group classes to meet people. They still need on-ramp. Say: 'You will meet your coach and people in due time \u2014 but it is hard to connect with others when you are worried about not knowing movements or getting hurt. The hybrid option lets you learn effectively so that when you are in group class, you can actually enjoy it. Your coach will also learn about you and tell other coaches how to help you, making it even easier to connect.'",
+        "AVATAR 4 \u2014 The Lifelong CrossFitter: They want to go straight into classes. Their objection is that we are more expensive than other gyms. Response: 'We want our coaches to have a real career in this. Most CrossFit gyms have not raised prices in over 10 years. Our rates reflect our downtown rent and our commitment to coach quality. You will get more value here than you have anywhere else \u2014 and our prices are firm. We stand behind that.'",
+        "AVATAR 5 \u2014 Just Moved and Looking for a Gym Nearby: This is the coldest lead and the hardest to sell. They do not know us at all. Tell them everything \u2014 what we do, that we are a coaching gym, ask them about their problems and attach what we do to each one. At the end when price comes up, ask what range they were looking for and get as close as you can. Say: 'If you are looking for under $100 we cannot help. But if you are looking for coaching and you want this problem fixed, it is a lot cheaper than going it alone and quitting again. We have held so many people accountable to hitting their goals.'",
+        "PRACTICE TIP: Think of all the questions someone might ask, then set up a test No Sweat Intro with another coach. One of you plays the prospect, one plays the coach. Switch and repeat. This is the best way to get comfortable with all 5 avatars."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_adaptive_athletes_001": {
+      "title": "Coaching Adaptive Athletes \u2014 Protocol",
+      "category": "Coaching",
+      "summary": "How to coach athletes with prosthetics, limited mobility, or other adaptations. Focus on empathy, problem-solving, and communicating solutions to the rest of the coaching team.",
+      "steps": [
+        "When working with an adaptive athlete (prosthetics, wheelchair, limited sensation, etc.), start by identifying exactly what their adaptation is and what equipment or prosthetics they use.",
+        "Put yourself in their position. Think about what life would be like with that adaptation. Example: below-the-knee amputation with a prosthetic foot \u2014 what would squatting feel like with a hard piece of plastic where your ankle should be? Use this empathy to proactively think through movement limitations before they come up.",
+        "Apply those adaptations to the movement. Example: if they cannot move their ankle, treat it like a fixed ankle and make the appropriate scaling adjustments.",
+        "Offer your solution and ask: 'Does that help?' If yes, ask if there is anything else you can do. If no, ask: 'Okay, help me understand what the issue is so we can make a plan together.'",
+        "When problem-solving, always give 3 solutions and 1 recommendation. Let them choose the solution that suits them best.",
+        "Once a solution is agreed on, say: 'Let's implement this. I will let the other coaches know. In your next workout we will see if this works \u2014 if not, we will try one of the other solutions. Is there anything else I can help with today?'",
+        "After the session, communicate the chosen solution to all coaches so everyone is prepared the next time that athlete comes in."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_returning_dropin_001": {
+      "title": "Returning Drop-In \u2014 Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "How to handle a drop-in who has visited before. Look them up in Wodify, offer to charge their card on file, and make them feel remembered and welcome.",
+      "steps": [
+        "Go to app.wodify.com. Go to People, then Athletes.",
+        "At the top you will see a filter for active memberships \u2014 click All, then type in the person's name.",
+        "Open their account and check if they have a credit card on file.",
+        "If they have a card on file: offer to add the drop-in to their account and auto-charge the card. If they prefer, they can also go through the standard drop-in procedure \u2014 send them the class link for their requested time.",
+        "Make them feel remembered and welcomed. Say something like: 'Hey [Name], great to see you again! How has everything been? We cannot wait to train with you \u2014 here is the link for the [time] class!'"
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_instagram_follow_001": {
+      "title": "Someone Follows Us on Instagram \u2014 Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "When someone follows Vegvisir on Instagram, follow them back and send a welcoming DM. Guide them toward a free intro or drop-in based on their response.",
+      "steps": [
+        "Follow them back on Instagram.",
+        "Send them the following message: 'Hey [First Name]! We are so happy you followed us! Are there any fitness questions we can help you with? If so, let us know \u2014 we are happy to help as soon as possible!'",
+        "Respond to their reply following our values \u2014 be helpful, honest, and curious.",
+        "If they seem interested in joining, guide them toward booking a Free Intro.",
+        "If they are looking to drop in, help them through the drop-in process (refer to the Drop-In Booking Protocol SOP)."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_membership_change_down_001": {
+      "title": "Membership Change \u2014 Downgrade for Next Month",
+      "category": "Sales & Member Ops",
+      "summary": "How to temporarily lower a member's membership tier for the next month and revert it back the following month. Membership tiers: 4x/mo $113, 8x/mo $215, 12x/mo $225, Unlimited $239.",
+      "steps": [
+        "Membership tiers available: 4x/mo = $113, 8x/mo = $215, 12x/mo = $225, Unlimited = $239.",
+        "Go to app.wodify.com. Go to People, then Athletes. Search and open the member's account.",
+        "Click their current membership. Hit Generate Next Membership.",
+        "Once the next membership generates, change the number of attendances to match the lower tier they are moving to.",
+        "Go to their invoice and change the invoice amount to the appropriate dollar amount for that lower tier.",
+        "Then generate the membership for the month after that and change it back to their original membership tier so it reverts automatically.",
+        "They do not need to sign anything. Let them know what you did and how many times they can come in during the upcoming month.",
+        "Note: if they are downgrading and have drop-ins, they can apply drop-in fees as credit up to half the value of their membership \u2014 this is currently only valid on the $215 (8x/mo) membership."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_membership_change_up_001": {
+      "title": "Membership Change \u2014 Upgrade for Next Month or Immediately",
+      "category": "Sales & Member Ops",
+      "summary": "How to upgrade a member's CrossFit membership for the next billing cycle or partway through the current month using a custom invoice for the difference.",
+      "steps": [
+        "Go to app.wodify.com. Go to People, then Athletes. Search and open the member's account.",
+        "Open their current membership and set it to deactivate at the next renewal date.",
+        "Create the new upgraded membership starting on that same renewal date.",
+        "Let the member know the agreement has been emailed to them and that they need to sign it before the renewal date.",
+        "IF THEY WANT TO UPGRADE BEFORE THEIR NEXT RENEWAL DATE (mid-month): go to their account and tap New Invoice.",
+        "Set the invoice to auto-charge today. Create a custom invoice \u2014 title it 'Membership Increase Adjustment'.",
+        "Set the dollar amount to the difference between their current membership and the new one.",
+        "Hit Save. The invoice will run and the upgrade takes effect immediately."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_change_forwarding_number_001": {
+      "title": "Changing the Gym Phone Forwarding Number",
+      "category": "Coaching",
+      "summary": "How to change which phone number receives forwarded calls from the gym line. Must be confirmed with owner Kidd before making changes.",
+      "steps": [
+        "IMPORTANT: Confirm with the gym owner Kidd before making any changes to the forwarding number.",
+        "Go to app.gymleadmachine.com and sign in using the admin profile: kidd@vegvisircrossfit.com.",
+        "Enter the password and the one-time password provided.",
+        "Once logged in, go to Settings, then Profile.",
+        "Go to Call Settings.",
+        "Find the Forwarding Number field and update it to the correct phone number.",
+        "Hit Save."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_failed_payment_001": {
+      "title": "Failed Payment \u2014 Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "How to handle a failed membership payment. Priority is making the member feel respected while resolving the balance. Grace period of 5 days for emergencies like stolen cards.",
+      "steps": [
+        "Priority 1: make the member feel welcome and not ashamed. Priority 2: resolve the balance \u2014 we cannot render services without payment.",
+        "Go to app.wodify.com. Go to People, then Athletes. Search and open the member's account.",
+        "Find the open invoice on their account. Tap the invoice number.",
+        "Go to Actions, then tap Pay Invoice, then select Default Card. Note the response.",
+        "IF THE RESPONSE IS 'does not allow this type of purchase' OR 'card deactivated': reach out to the member with friendly language: 'Hey [First Name], we tried to run your balance but ran into a small issue. Things like this totally happen \u2014 can you go ahead and check the invoice in your email and update your card information? If you have any trouble, let me know and I can help you do it through the Wodify app.'",
+        "IF THE RESPONSE IS 'insufficient funds': do not reach out yet. Let the system retry up to 3 times. If it still does not go through after 3 attempts, then reach out: 'Hey [First Name], there is an invoice due at the gym and we have been having some trouble running your card. Let me know if you need help updating it through the Wodify app.'",
+        "For any card issue: give a grace period of up to 5 days before stopping services. If it is a genuine emergency like a stolen card, be flexible and communicate with the owner.",
+        "In all communications use friendly, non-confrontational language. The member should never feel attacked \u2014 just informed."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_extended_dropin_001": {
+      "title": "Extended Drop-In (Visiting for a Month) \u2014 Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "For drop-ins staying for an extended period, verify their CrossFit experience (6+ months required), then set them up with a regular group membership with no auto-renew.",
+      "steps": [
+        "First confirm they have 6 or more months of CrossFit experience at a real CrossFit gym. We do not allow anyone without this experience to drop in \u2014 even for an extended stay.",
+        "Ask for their home CrossFit gym and verify it is a legitimate gym (refer to the Drop-In Eligibility SOP).",
+        "Take their info from Gym Lead Machine and create a new athlete profile in Wodify.",
+        "Once the athlete profile is created, go to New Membership and select the appropriate tier \u2014 Unlimited, 12x/mo, or 8x/mo based on what they need.",
+        "Set the start date to the day they begin.",
+        "If using Quick Add: after saving, open the membership, go to Actions, and hit Stop Auto-Renew. If using Customize: turn off auto-renew before saving.",
+        "Email them to let them know they have a waiver to sign, an agreement to sign, and a welcome email with the Wodify app download.",
+        "Let them know the membership will end one month after their start date and will not auto-renew."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_custom_prorated_membership_001": {
+      "title": "Custom Prorated Membership \u2014 Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "For members (90+ days) who need a custom number of classes due to a date change, extended stay, or other situation. Prorate based on their membership tier.",
+      "steps": [
+        "This is only for members who have been with us for 90 days or longer.",
+        "Ask the member how many classes they need before going on hold or canceling.",
+        "Go to app.wodify.com. Go to People, then Athletes. Open their account.",
+        "Generate a new membership starting on the date of their first class.",
+        "Use their usual membership tier as the base. Treat Unlimited as 15 classes, 12x as 12 classes, and 8x as 8 classes.",
+        "Select Customize for their membership type. Change the number of attendances to the number of classes they need.",
+        "Calculate the prorated price: (classes needed / total classes in tier) x membership price. Example: 6 classes out of 12 = 6/12 x $225 = $112.50.",
+        "Set the price to that prorated amount and hit Save.",
+        "Let the member know the membership has been created and that they just need to sign the agreement. Once signed, they can start booking into classes."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_door_not_closing_001": {
+      "title": "Front Door Not Closing \u2014 Fix",
+      "category": "Maintenance",
+      "summary": "If the front door is not closing properly, use an Allen wrench to adjust the door closer arm at the top left of the door. Counterclockwise = slower, clockwise = faster.",
+      "steps": [
+        "The door is likely not closing because it is bouncing off the middle plate or closing too slowly, causing the latch to miss.",
+        "Go to the supply closet and grab an Allen wrench from the tool drawer \u2014 the mesh bucket on the 3rd shelf of the chrome shelving unit. You may need to grab the full set to find the right size.",
+        "Go to the door closer \u2014 the small box at the top left of the door with the arm attached.",
+        "On the left side of that box you will see two Allen wrench holes \u2014 one on top and one on the bottom. You want the one on TOP.",
+        "If the door is closing too fast and bouncing: turn the Allen wrench counterclockwise (to the left) to slow it down.",
+        "If the door is closing too slow and not latching: turn the Allen wrench clockwise (to the right) to speed it up.",
+        "Adjust until the door closes all the way on its own without bouncing, and the magnetic lock catches cleanly.",
+        "Return the Allen wrench to the tool basket in the supply closet."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_sales_sheet_001": {
+      "title": "Using the Sales Sheet \u2014 Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "How to use the 2025-2026 Sales Sheet in Google Sheets to track leads, consultation bookings, show rates, and front-end revenue.",
+      "steps": [
+        "The Sales Sheet is in Google Sheets and is titled '2025-2026 Sales Sheet'. If you do not have access, request it from management.",
+        "When a new lead comes in through the website, a pricing form, or a referral from a current athlete, add their name to the sheet.",
+        "Under Notes, write how you know them or what the next step is.",
+        "Your goal is to get every lead on the list booked for a consultation. Call them once per day for up to 3 days in a row until they book or go cold.",
+        "Once they book, mark Yes in the Booked column.",
+        "After their consultation: if they showed up mark Yes. If they did not show, mark No Show and note the reason if known.",
+        "If they signed up: enter the front-end revenue from the sale in the Sold column.",
+        "If they did not sign up: note the reason in the Sold column (e.g. price, not ready, etc.).",
+        "Notes should always contain the most current next step for that lead.",
+        "At the end of each month, all data is collected and reviewed. A new month starts fresh."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_family_emergency_001": {
+      "title": "Member Has a Family Emergency \u2014 Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "When a member reaches out about a family emergency, lead with care and compassion first. Membership decisions are secondary. Follow the Emergency Hold SOP if needed.",
+      "steps": [
+        "Lead with care \u2014 making the member feel supported is the priority. Membership logistics come second.",
+        "If it is a bereavement (someone has passed): 'We are so sorry to hear this. We hope that you and your family find the healing you need right now. Please do not worry about anything here \u2014 we are thinking of you.'",
+        "If someone is in the hospital: 'We are so sorry to hear this. We hope they heal quickly. Please let us know if there is anything we can do to help during this time.'",
+        "If they are personally hurt or dealing with something difficult: ask how they are doing and what, if anything, we can do to help.",
+        "If they ask for a membership hold: follow the Emergency Hold SOP.",
+        "If they need to leave and are unsure when they will return: run it by the General Manager or Owner (Kidd) before offering an emergency cancellation. Kidd will approve or not based on the situation.",
+        "In all communications, ask questions that make the member feel genuinely cared for. Make it clear we are doing everything we can to help them \u2014 not just manage a membership."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_member_thinking_of_leaving_001": {
+      "title": "Member Thinking of Leaving \u2014 Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "When a member says they are thinking of leaving due to a bad experience, escalate the communication channel as high as possible and use the 1 problem, 3 solutions, 1 recommendation framework.",
+      "steps": [
+        "When a member says they are thinking of leaving due to a bad experience, respond immediately with empathy: 'We are so sorry to hear that \u2014 that is never what we expect for any of our athletes. Would you be available for an in-person check-in at your earliest convenience? We would love to sit down, talk, and see what we can do to make this right.'",
+        "If in-person is not possible, offer a phone call. If not that, a video call. Get the conversation as high up the communication ladder as possible \u2014 avoid handling this over text or email if you can.",
+        "If text or email is the only option, keep it tactful. Ask questions, listen, and avoid being defensive.",
+        "Your goal in the conversation is to understand the root of the problem. Ask questions until you know exactly what went wrong.",
+        "Apply the framework: 1 problem, 3 solutions, 1 recommendation. Your recommendation should involve both you and the member working together toward what they originally came here to achieve.",
+        "Refer to the Membership Exchange SOP if the solution involves swapping their remaining membership value for PT or drop-ins."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_book_checkin_001": {
+      "title": "How to Book a Check-In Appointment",
+      "category": "Coaching",
+      "summary": "Check-ins do not have their own membership type. Book them as a Free Intro in Wodify so both coach and athlete can sign in without a membership error.",
+      "steps": [
+        "Confirm the date and time with the person you are doing the check-in with.",
+        "Go to Appointments, then Calendar, then New Appointment.",
+        "Enter the correct date, time, your name, and the athlete's name.",
+        "For the appointment type, select Free Intro.",
+        "Hit Save.",
+        "This allows you to sign both yourself and the athlete in without the system flagging a missing membership."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_2on1_criteria_001": {
+      "title": "Who Qualifies for a Free 2-on-1 PT Session",
+      "category": "Sales & Member Ops",
+      "summary": "The 4 criteria a member must meet before being offered a free 2-on-1 personal training session for a friend.",
+      "steps": [
+        "The member must meet all 4 of the following criteria before you offer a free 2-on-1 PT session:",
+        "CRITERIA 1: You and at least one other coach genuinely enjoy working with this person every time they come in. They make your day better.",
+        "CRITERIA 2: They clearly align with our values \u2014 Humble, Hungry, and Human Smart. There is no friction with this person.",
+        "CRITERIA 3: They have mentioned that they have a friend who is interested in Vegvisir.",
+        "CRITERIA 4: They have been a member for 90 or more days.",
+        "If all 4 criteria are met: offer the free 2-on-1 PT session and let the owner (Kidd) or the current General Manager know for approval. If you have been coaching here for over a year, approval is implied \u2014 but if you start offering this 2-3 times in a single month and people are not signing up, expect a conversation with ownership.",
+        "If they sign up each time, this is a great thing and is actively encouraged."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_kansa_study_001": {
+      "title": "Kansa Study Sign-Up \u2014 Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "When a new participant signs up through the Kansa Study, reach out to book a call, conduct a mini NSI, onboard them as a new athlete, and follow the hybrid membership SOP.",
+      "steps": [
+        "You will receive an email from the Kansa Study saying 'New Participant' with their contact info.",
+        "Reach out using the preferred form of communication and say: 'Hey [First Name]! We are so excited to have you be a part of the Vegvisir CrossFit family! Can you give us a time that would be best for a call so we can tell you more about what to expect and set up your first appointment?'",
+        "Work with them to find a time that works for both of you.",
+        "On the call, conduct a mini No Sweat Intro: learn their goals, learn how we can help them, and make a plan.",
+        "Let them know they will be doing 4 to 8 personal training sessions before transitioning into group classes. Start with 4 and adjust from there based on their progress.",
+        "Make sure they leave the call with a clear plan.",
+        "Post a New Athlete Alert in the #new-athletes Slack channel. Include their first and last name, any adaptations, their goals, and how we can help them over the next 14 weeks.",
+        "Create their membership following the Hybrid / On-Ramp Membership SOP \u2014 treat it as a 4x PT / 4x CrossFit (8x total) on-ramp membership."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_charge_invoice_001": {
+      "title": "How to Charge or Create an Invoice",
+      "category": "Sales & Member Ops",
+      "summary": "How to charge an existing invoice or create a new custom invoice in Wodify.",
+      "steps": [
+        "TO CHARGE AN EXISTING INVOICE: go to app.wodify.com. Go to Financial, then Invoices. Click the invoice you need. Go to Actions, then Charge Invoice. Select the default payment method on file.",
+        "TO CREATE A NEW INVOICE: go to the athlete's profile. Tap + Invoice or New Invoice. Select the purchase type \u2014 choose from the existing options or create a custom invoice for something else.",
+        "For a custom invoice: name the invoice clearly (e.g. 'Membership Increase Adjustment'), set the correct price, set it to Auto Pay, and confirm the amount matches what was agreed upon.",
+        "Hit Save. The invoice will auto-charge at 12:01 AM.",
+        "If you need to charge it immediately: go to Actions, then Pay Invoice, and select the default payment method."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
     }
   },
-  "lastUpdated": "2026-07-14T00:00:00.000Z",
-  "version": 2
+  "lastUpdated": "2026-07-15T00:00:00.000Z",
+  "version": 3
 }
