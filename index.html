@@ -771,7 +771,18 @@
         body: JSON.stringify({ coach_notes: noteContent })
       })
       .then(function(r) { return r.json(); })
-      .then(function() { setSaving('saved'); setEditing(false); if(onSaveNote) onSaveNote(athlete.row_number, noteContent); })
+      .then(function() {
+        setSaving('saved');
+        setEditing(false);
+        if(onSaveNote) onSaveNote(athlete.row_number, noteContent);
+        // Refresh this athlete's data from server after 1s
+        setTimeout(function(){
+          fetch('https://coach-dashboard-api.onrender.com/athletes/search?name='+encodeURIComponent(athlete.athlete))
+            .then(function(r){return r.json();})
+            .then(function(d){ if(d.athlete && onSaveNote) onSaveNote(athlete.row_number, d.coach_notes||noteContent); })
+            .catch(function(){});
+        }, 1000);
+      })
       .catch(function() { setSaving('error'); });
     };
 
@@ -940,19 +951,25 @@
     var sa=useState(null); var selectedAthlete=sa[0]; var setSelectedAthlete=sa[1];
     var lr=useState(null); var lastRefresh=lr[0]; var setLastRefresh=lr[1];
 
-    var loadAthletes=React.useCallback(function(){
-      setLoading(true); setError(null);
+    var loadAthletes=React.useCallback(function(silent){
+      if(!silent) setLoading(true);
+      setError(null);
       fetch(PROXY+'/athletes')
         .then(function(r){return r.json();})
         .then(function(data){
           setAllAthletes(data.athletes||[]);
           setLastRefresh(new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));
         })
-        .catch(function(err){setError(err.message);})
-        .then(function(){setLoading(false);});
+        .catch(function(err){if(!silent) setError(err.message);})
+        .then(function(){if(!silent) setLoading(false);});
     },[]);
 
-    useEffect(function(){loadAthletes();},[loadAthletes]);
+    useEffect(function(){
+      loadAthletes();
+      // Auto-refresh every 3 minutes silently
+      var timer = setInterval(function(){ loadAthletes(true); }, 180000);
+      return function(){ clearInterval(timer); };
+    },[loadAthletes]);
 
     var handleDelete = function(rowNumber) {
       setAllAthletes(function(prev){ return prev.filter(function(a){ return a.row_number !== rowNumber; }); });
@@ -979,6 +996,8 @@
       if(selectedAthlete && selectedAthlete.row_number===rowNumber){
         setSelectedAthlete(function(prev){ return Object.assign({},prev,{coach_notes:newNote}); });
       }
+      // Also silently reload all athletes so Slack updates are visible
+      setTimeout(function(){ loadAthletes(true); }, 2000);
     };
 
     var toggleFilter = function(f){
@@ -1039,7 +1058,7 @@
           ),
           h('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5}},
             lastRefresh&&h('div',{style:{fontSize:10,color:C.textFaint}},'Updated '+lastRefresh),
-            h('button',{className:'btn',onClick:loadAthletes,style:{background:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'⟳ Refresh')
+            h('button',{className:'btn',onClick:function(){loadAthletes(false);},style:{background:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'⟳ Refresh')
           )
         ),
         // Search
