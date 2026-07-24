@@ -955,20 +955,50 @@ app.delete("/playbook/sop/:key", async (req, res) => {
 
 const WODS_FILE = "wods.json";
 
+// Cache WODs in memory — refresh once per day
+let wodsCache = null;
+let wodsCacheTime = 0;
+const WODS_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
 async function getWodsFromGitHub() {
-  // Use raw content URL to avoid GitHub API's base64 size limits
+  const now = Date.now();
+  if (wodsCache && (now - wodsCacheTime) < WODS_CACHE_TTL) {
+    console.log('[WODs] Serving from cache');
+    return wodsCache;
+  }
+  console.log('[WODs] Fetching from GitHub...');
   const resp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/${WODS_FILE}`, {
     headers: { Authorization: `Bearer ${GITHUB_TOKEN}` }
   });
   if (!resp.ok) throw new Error(`GitHub WODs fetch failed: ${resp.status}`);
-  return resp.json();
+  const data = await resp.json();
+  wodsCache = data;
+  wodsCacheTime = now;
+  console.log(`[WODs] Cached ${data.workouts?.length || 0} workouts`);
+  return data;
 }
 
 app.get("/wods", async (req, res) => {
   try {
     const wods = await getWodsFromGitHub();
-    res.json(wods);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    // Deduplicate by name — keep the most recent occurrence of each workout name
+    const workouts = wods.workouts || [];
+    const seen = new Map();
+    for (const w of workouts) {
+      const key = w.name.toLowerCase().trim();
+      const existing = seen.get(key);
+      // Keep entry with a date if available, otherwise keep first seen
+      if (!existing || (!existing.date && w.date) || (w.date && w.date > existing.date)) {
+        seen.set(key, w);
+      }
+    }
+    const deduped = Array.from(seen.values());
+    console.log(`[WODs] Serving ${deduped.length} workouts (deduped from ${workouts.length})`);
+    res.json({ workouts: deduped, version: wods.version, lastUpdated: wods.lastUpdated });
+  } catch (err) {
+    console.error('[WODs] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
