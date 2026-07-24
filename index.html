@@ -210,9 +210,21 @@
 
     useEffect(function(){
       fetch('https://coach-dashboard-api.onrender.com/wods')
-        .then(function(r){ return r.json(); })
-        .then(function(data){ setWorkouts(data.workouts && data.workouts.length ? data.workouts : SAMPLE_WORKOUTS); })
-        .catch(function(){ setWorkouts(SAMPLE_WORKOUTS); });
+        .then(function(r){
+          if(!r.ok) throw new Error('Server error '+r.status);
+          return r.json();
+        })
+        .then(function(data){
+          var wods = data.workouts || [];
+          console.log('[WODs] Loaded '+wods.length+' workouts from server');
+          setWorkouts(wods.length ? wods : SAMPLE_WORKOUTS);
+          setSaveStatus('saved');
+        })
+        .catch(function(err){
+          console.error('[WODs] Load failed:', err.message);
+          setWorkouts(SAMPLE_WORKOUTS);
+          setSaveStatus('error');
+        });
     },[]);
 
     var persist=useCallback(function(data){ setSaveStatus('saved'); },[]);
