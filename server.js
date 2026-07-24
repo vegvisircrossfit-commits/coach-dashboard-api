@@ -831,14 +831,31 @@ app.post("/admin/update-anchor", (req, res) => {
 
 app.get("/admin/clear-wod-cache", (req, res) => {
   wodsCache = null;
-  wodsCacheTime = 0;
+  res.json({ ok: true, message: "Memory cache cleared" });
+});
+
+// Upload wods.json directly to Render — bypasses GitHub size limits
+// POST with JSON body: { workouts: [...] }
+app.post("/admin/upload-wods", express.json({ limit: "10mb" }), async (req, res) => {
   try {
-    if (fs.existsSync(WODS_DISK_CACHE)) {
-      fs.unlinkSync(WODS_DISK_CACHE);
-      res.json({ ok: true, message: "WOD cache cleared — next /wods call will refetch from GitHub" });
-    } else {
-      res.json({ ok: true, message: "No disk cache to clear" });
+    const data = req.body;
+    if (!data.workouts || !Array.isArray(data.workouts) || data.workouts.length < 100) {
+      return res.status(400).json({ error: "Invalid wods data — need workouts array with 100+ entries" });
     }
+    // Deduplicate by name, keep most recent
+    const seen = new Map();
+    for (const w of data.workouts) {
+      const key = (w.name || '').toLowerCase().trim();
+      const existing = seen.get(key);
+      if (!existing || (w.date && (!existing.date || w.date > existing.date))) {
+        seen.set(key, w);
+      }
+    }
+    const deduped = { workouts: Array.from(seen.values()), version: 1, lastUpdated: new Date().toISOString() };
+    fs.writeFileSync(WODS_PERSISTENT, JSON.stringify(deduped));
+    wodsCache = deduped;
+    console.log(`[WODs] Uploaded and saved ${deduped.workouts.length} workouts`);
+    res.json({ ok: true, count: deduped.workouts.length });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -967,77 +984,32 @@ app.delete("/playbook/sop/:key", async (req, res) => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 const WODS_FILE = "wods.json";
+const WODS_PERSISTENT = '/tmp/wods_persistent.json'; // uploaded once via /admin/upload-wods
 
-// WODs: fetch from GitHub once, cache in memory for 24 hours
-// Uses streaming JSON parse to handle large file reliably
+// WODs are served from a file uploaded directly to Render via /admin/upload-wods
+// This avoids GitHub large file truncation issues entirely
 let wodsCache = null;
-let wodsCacheTime = 0;
-const WODS_CACHE_TTL = 24 * 60 * 60 * 1000;
-const WODS_DISK_CACHE = '/tmp/wods_cache.json';
 
-async function getWodsFromGitHub() {
-  const now = Date.now();
-
-  // Memory cache hit
-  if (wodsCache && (now - wodsCacheTime) < WODS_CACHE_TTL) {
-    return wodsCache;
-  }
-
-  // Disk cache hit (survives memory resets)
-  if (fs.existsSync(WODS_DISK_CACHE)) {
+async function getWods() {
+  if (wodsCache) return wodsCache;
+  if (fs.existsSync(WODS_PERSISTENT)) {
     try {
-      const stat = fs.statSync(WODS_DISK_CACHE);
-      if ((now - stat.mtimeMs) < WODS_CACHE_TTL) {
-        console.log('[WODs] Loading from disk cache...');
-        const raw = fs.readFileSync(WODS_DISK_CACHE, 'utf8');
-        wodsCache = JSON.parse(raw);
-        wodsCacheTime = now;
-        console.log(`[WODs] Disk cache hit: ${wodsCache.workouts?.length} workouts`);
-        return wodsCache;
+      console.log('[WODs] Loading from persistent storage...');
+      const raw = fs.readFileSync(WODS_PERSISTENT, 'utf8');
+      const data = JSON.parse(raw);
+      if (data.workouts?.length > 100) {
+        wodsCache = data;
+        console.log(`[WODs] Loaded ${data.workouts.length} workouts`);
+        return data;
       }
-    } catch(e) { console.log('[WODs] Disk cache invalid, refetching'); }
+    } catch(e) { console.error('[WODs] Persistent load failed:', e.message); }
   }
-
-  // Fetch from GitHub
-  console.log('[WODs] Fetching from GitHub...');
-  // For large files, use GitHub API with download_url which handles auth properly
-  const metaResp = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${WODS_FILE}`, {
-    headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' }
-  });
-  if (!metaResp.ok) throw new Error(`GitHub meta fetch failed: ${metaResp.status}`);
-  const meta = await metaResp.json();
-  // Use download_url for the actual content — avoids base64 encoding issues
-  const resp = await fetch(meta.download_url);
-  if (!resp.ok) throw new Error(`GitHub WODs fetch failed: ${resp.status}`);
-
-  const text = await resp.text();
-  console.log(`[WODs] Received ${text.length} chars from GitHub`);
-
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch(e) {
-    throw new Error(`WODs JSON parse failed: ${e.message} (received ${text.length} chars, starts: ${text.slice(0,50)})`);
-  }
-
-  // Validate before caching
-  if (!data.workouts || !Array.isArray(data.workouts) || data.workouts.length < 100) {
-    throw new Error(`WODs data invalid: got ${data.workouts?.length || 0} workouts`);
-  }
-  // Save to disk and memory
-  wodsCache = data;
-  wodsCacheTime = now;
-  try {
-    fs.writeFileSync(WODS_DISK_CACHE, JSON.stringify(data));
-    console.log(`[WODs] Saved ${data.workouts.length} workouts to disk cache`);
-  } catch(e) { console.error('[WODs] Disk cache write failed:', e.message); }
-  console.log(`[WODs] Fetched and cached ${data.workouts.length} workouts`);
-  return data;
+  throw new Error('WOD library not uploaded yet — use /admin/upload-wods to upload wods.json');
 }
 
 app.get("/wods", async (req, res) => {
   try {
-    const wods = await getWodsFromGitHub();
+    const wods = await getWods();
     // Deduplicate by name — keep the most recent occurrence of each workout name
     const workouts = wods.workouts || [];
     const seen = new Map();
