@@ -1871,6 +1871,138 @@
       ],
       "source": "text",
       "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_first_90_days_001": {
+      "title": "Client Journey \u2014 First 90 Days",
+      "category": "Sales & Member Ops",
+      "summary": "The full athlete journey from sign-up through 90 days. Covers onboarding, Slack updates, check-ins, membership renewal, and long-term engagement milestones.",
+      "steps": [
+        "SIGN-UP: When an athlete joins, the person who sold the membership lets the Member Engagement Coordinator (MEC) know. The athlete's info is entered into the On-Ramp page, a brief is posted in #new-athletes on Slack (which auto-populates the Athlete Check-In Sheet), and any personal connections, hobbies, or work info are uploaded to the Affinity Sheet.",
+        "WELCOME VIDEO: Once those 3 sheets are updated, the MEC sends the new athlete a video message saying: 'Hi, my name is [First Name]. Welcome to the Vegvisir family! We cannot wait to see you at your first workout. Please text me any time to let me know how we can help you best or if you have any questions \u2014 I am here to help as soon as possible. Welcome to the family and we cannot wait to see you!' Mark it as sent on the On-Ramp page.",
+        "AFTER 1ST SESSION: The coach who ran the session posts in #current-athletes on Slack with any adaptations the athlete needs or anything the team can do to improve their experience beyond normal class corrections.",
+        "END OF FIRST MONTH: At the last personal training session of the first month's membership, the coach must perform a check-in and invite the athlete to sign up for their next membership. If they sign up, post in #current-athletes letting the team know they have moved on and how to best support them. If they do not renew, notify Kidd (owner) immediately and follow the appropriate follow-up procedures.",
+        "ONGOING \u2014 MEC WEEKLY TEXTS: The MEC texts the athlete weekly throughout their journey. Key milestones to remind them of: 30-day check-in, 60-day check-in, and 90-day check-in. Upload all check-in notes to #current-athletes with the athlete's name so the app can update.",
+        "90-DAY CHECK-IN: The MEC conducts the final close-range check-in and lets the athlete know that after this point check-ins will shift to every 90 days. They will still hear from the MEC about their 100th class, 250th class, upcoming events, and other engagement touchpoints to keep them connected to the gym."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_ku_workout_upload_001": {
+      "title": "KU Adaptive On-Ramp \u2014 Uploading Workouts & Recording RPE",
+      "category": "Coaching",
+      "summary": "For KU Research Study athletes, every personal training workout must be uploaded into Wodify and RPE must be recorded in the comments. This is required by the study.",
+      "steps": [
+        "Go to app.wodify.com. Scroll to the bottom and tap the Extensions tab.",
+        "Select Kiosk Plus and open the Coach Board.",
+        "Select the least busy class of the day \u2014 usually the 9 AM class. Tap that class.",
+        "Search the athlete's name and tap Sign In.",
+        "Tap the 3 dots underneath their profile picture that appears.",
+        "Select Put In Custom One.",
+        "Make sure Non-Benchmark is selected.",
+        "Type in the workout exactly as it was performed.",
+        "Hit Save.",
+        "In the Comments field, type: RPE [number on a scale of 1-10].",
+        "This step is mandatory for every KU Research Study session without exception."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_pt_client_handover_001": {
+      "title": "Handing Over a Personal Training Client \u2014 Protocol",
+      "category": "Coaching",
+      "summary": "When a PT client needs to transfer to a new coach, the transition takes a full month and is done gradually so the athlete never feels abandoned. Treat it like introducing a trusted friend, not a handoff.",
+      "steps": [
+        "Treat this transition seriously. PT clients form tight relationships with their coaches. A hasty handover is one of the most common reasons we lose personal training clients. Approach this like helping them find someone they will trust just as much.",
+        "FIRST HALF OF THE MONTH (weeks 1-2): The outgoing coach runs all workouts and leads all sessions as normal. The incoming coach attends every session, observes, builds rapport with the athlete, and learns exactly how things are done for this client.",
+        "SECOND HALF OF THE MONTH (weeks 3-4): The incoming coach writes and executes all workouts. The outgoing coach attends every session in a shadow role \u2014 not leading, just present \u2014 making sure that everything the athlete has come to know and love is being honored by the new coach.",
+        "END OF THE MONTH: Ask the athlete directly if they are comfortable with the transition.",
+        "If YES: complete the coach transition. The new coach takes over fully.",
+        "If NO: bring in Kidd for a follow-up call to find the right solution. This may mean keeping the current arrangement longer, finding a different coach, or having a candid conversation about what the athlete needs. If the outgoing coach has a path issue, talk with Kidd about adjustments that work for both the coach's career and the athlete's experience."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_sandbag_cleaning_001": {
+      "title": "Sandbag Area \u2014 Cleaning Protocol",
+      "category": "Cleaning & Supplies",
+      "summary": "If there is dog hair or dirt around the sandbags, blow it out first with the leaf blower, then scrub with the green automatic scrubber, then blow again. Plug in and return all equipment when done.",
+      "steps": [
+        "Get the leaf blower from the back of the supply closet \u2014 it is hanging from the hooks at the back. Insert a charged battery.",
+        "Open the garage door.",
+        "Blow out all dog hair and dirt around the sandbag area, directing debris out through the garage door.",
+        "Close the garage door.",
+        "If hair or dirt remains, get the green automatic scrubber. The power button blends into the handle so look carefully for it \u2014 it is a different color from the rest of the handle.",
+        "Bring the scrubber to the sandbag area and scrub to remove remaining dog hair and debris.",
+        "Blow the area again with the leaf blower and direct everything out through the garage door.",
+        "Plug in the batteries used on both the leaf blower and the scrubber.",
+        "Return both pieces of equipment to where you got them."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_impromptu_checkin_001": {
+      "title": "Impromptu Check-In \u2014 Protocol",
+      "category": "Coaching",
+      "summary": "When an athlete declines a formal check-in, conduct an impromptu version through casual conversation. Still log it in #current-athletes and ask for a Google review if they are thriving.",
+      "steps": [
+        "If an athlete does not want to do a formal check-in, you can still conduct one informally. You can still log it as a check-in in #current-athletes.",
+        "Ask casually: 'Hey, you do not have to do a check-in \u2014 but how are you doing? How is your journey going? Are you happy?'",
+        "Listen carefully to their response.",
+        "If things are going well: congratulate them genuinely. Then ask: 'Is there anything we can do to help you even more?' If nothing, move on. If something, help them in the best way you can following the gym's values.",
+        "If things are not going well: help them problem-solve. Ask: 'Is there anything we can help you with?' Help them feel cared for and follow up with the team.",
+        "Close with: 'All right, cool \u2014 thank you. That is really all I needed to know.'",
+        "If they are having a great time: ask if they would be willing to leave a 5-star Google review and hand them the QR code.",
+        "If they are struggling: let the team know in #current-athletes how you are going to help them and what the plan is.",
+        "Log the check-in notes in #current-athletes with the athlete's name."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_frayed_bands_001": {
+      "title": "Frayed or Damaged Resistance Bands \u2014 Protocol",
+      "category": "Maintenance",
+      "summary": "If a band has a nick you can see through or a deep fray across the whole band, it is done. Cut it, trash it, and notify the owner when stock of any color drops below 8.",
+      "steps": [
+        "Inspect bands regularly. A band is done if: you can see through a nick to the other side, or there is a very deep fray running across the full width of the band.",
+        "If a band meets either of those criteria: bring it to the front desk.",
+        "Grab scissors and cut the band so it is completely inoperable.",
+        "Throw it in the trash.",
+        "If the count of any color band drops below 8, notify the gym owner (Kidd) so the supply can be replenished."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_lead_nurture_overview_001": {
+      "title": "Lead Nurture \u2014 Overarching Process",
+      "category": "Sales & Member Ops",
+      "summary": "The high-level lead nurture flow from first contact through 3 call attempts. Call within 5 minutes of receiving a lead. Text if no answer. After 3 attempts, mark on the sales sheet and let automation take over.",
+      "steps": [
+        "Whenever we receive a lead's contact info \u2014 through a website form, CrossFit form, or personal training form \u2014 call them within the first 5 minutes. Calling within 5 minutes makes us 98% more likely to sign them up compared to letting it linger.",
+        "If they do not pick up: send a text saying \u2014 'Hey [Name], this is Coach [Name] from Vegvisir CrossFit, just calling to see if I can answer any questions for you. Would love to chat and see how I can help!'",
+        "If they do not respond: call again the next day at the same time. Call again the day after that at the same time.",
+        "After 3 unanswered call attempts: go to the Sales Sheet, mark 'Called 3x', and let the automatic text sequences follow up from there.",
+        "If at any point they pick up and give you a callback time or book an appointment: follow up on that exactly as promised. Stay true to your word.",
+        "For more detail on the first call script, pricing conversations, and booking the NSI, refer to the First Call Script SOP."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_first_call_script_001": {
+      "title": "First Call Script \u2014 Turning a Lead Into an NSI Booking",
+      "category": "Sales & Member Ops",
+      "summary": "How to conduct the first call with a new lead. Goal is always to get them in person for a No Sweat Intro. Deflect pricing questions and anchor value to an in-person visit.",
+      "steps": [
+        "When they pick up, say: 'Hi, is this [Name]?' Wait for confirmation. Then: 'Hi [Name], this is Coach [Your Name] from Vegvisir CrossFit! I saw that you filled out a form on our website and I wanted to see if I could help answer any questions you had.'",
+        "Answer their questions with the goal of getting them in person for a No Sweat Intro. In-person visits convert far better because the athlete gets a feel for the gym, the coaching, and the culture \u2014 and they have fewer chances to talk themselves out of it.",
+        "IF THEY ASK FOR PRICING: do not give a full breakdown. Say: 'Typically our CrossFit members spend around $225 a month, with the first month being a bit more. Personal training sessions typically run around $85 per session. But honestly, it really depends on your needs \u2014 we build everything a la carte when you come in, talk through your goals, and make a real plan. We have helped over 1,000 people do this. When would be a good time for you to come in?'",
+        "Once they agree to come in and a date and time are confirmed, say: 'Awesome \u2014 we cannot wait to see you on [date/time]. You will get a confirmation text from me and a confirmation email. Is there anything else I can help you with today?' If no, say: 'Perfect \u2014 have a wonderful day and we will see you on [date]!' Then hang up.",
+        "Go to their account in Gym Lead Machine. Go to Appointments, then New Appointment. Enter the confirmed date and time with the coach available at that time.",
+        "Send them the NSI Confirmation Text (refer to the NSI Confirmation Text SOP).",
+        "IF THEY DO NOT WANT TO COME IN YET: say \u2014 'Totally understand! Is there a better time for me to follow up after you have had a chance to think about it?' Get a specific date and call them back on that date.",
+        "IF THEY ARE NO LONGER INTERESTED ON FOLLOW-UP: say \u2014 'No problem at all \u2014 we are grateful for your time. If anything changes, we would love to see you in the future.' End the call warmly."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
     }
   },
   "lastUpdated": "2026-07-15T00:00:00.000Z",
