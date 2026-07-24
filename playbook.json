@@ -23,7 +23,7 @@
         "Hit Record and narrate every step out loud as you do it \u2014 speak clearly enough that a 5-year-old could follow along.",
         "Once you have completed the task step by step, hit Stop on the voice memo.",
         "Title the recording with what the SOP is for, and put 'SOP' at the end of the title.",
-        "Email the voice memo file to: kidd@vegvisircrossfit.com",
+        "Email the voice memo file to: kidd@vegvisircrossfit.com (V-E-G-V-I-S-I-R C-R-O-S-S-F-I-T dot com, KIDD).",
         "In the subject line write: 'New SOP For [name of the SOP]'.",
         "Kidd will review it and add it to the playbook if it needs to be there."
       ],
@@ -1849,6 +1849,25 @@
         "For a custom invoice: name the invoice clearly (e.g. 'Membership Increase Adjustment'), set the correct price, set it to Auto Pay, and confirm the amount matches what was agreed upon.",
         "Hit Save. The invoice will auto-charge at 12:01 AM.",
         "If you need to charge it immediately: go to Actions, then Pay Invoice, and select the default payment method."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_ku_research_journey_001": {
+      "title": "KU Research Client Journey SOP",
+      "category": "Coaching",
+      "summary": "Step-by-step process for onboarding, training, and offboarding athletes enrolled in the KU Research Study. Covers intake call, PT sessions, class transition, exit testing, and membership conversion.",
+      "steps": [
+        "STEP 1 \u2014 Initial Contact: Upon receipt of an email from KU, email the participant (PPT) asking for a good day and time to call.",
+        "STEP 2 \u2014 Intake Call: On the call, learn why they wanted to start the study, their current limitations, and what a 10/10 experience would look like for them over the next 14 weeks. Convey all of this info to the team via Slack upon completion of the call. Once done, create their membership and confirm their first Personal Training date.",
+        "PT SESSION STRUCTURE: Athletes will receive 4-8 personal training sessions depending on their needs before entering group classes. Sessions can be performed as 2:1 or 3:1 at the 10 AM time slots Monday, Wednesday, and Friday \u2014 but other times are acceptable if needed.",
+        "IF MORE THAN 8 PT SESSIONS ARE NEEDED: confirm with Kidd before the 8th session to review roadblocks and constraints preventing group classes from being the right path forward for that athlete.",
+        "STEP 3 \u2014 Team Updates: After the 1st and 4th personal training sessions, update the team via Slack with the athlete's necessary adaptations and current trajectory. Also share the date and time of their first group class.",
+        "FIRST PT SESSION REQUIREMENT: The 1st personal training session MUST begin with the B1 and B2 tests.",
+        "IMPORTANT \u2014 RPE: ALL athlete scores must have RPE (Rate of Perceived Exertion) recorded at every session without exception.",
+        "STEP 4 \u2014 Group Classes: The athlete continues into regular group classes and can return to personal training any time they like. The Member Engagement Coordinator (MEC) will keep track of their progress. All coaches must record RPE for each workout along with the usual data recorded during class.",
+        "STEP 5 \u2014 Exit Testing (Week 13): Upon completion of the 13th week, the MEC contacts the athlete to schedule their exit workout. The B1 and B2 tests are performed again to measure progress.",
+        "STEP 6 \u2014 Membership Conversion: Upon completion of the program, offer the athlete their current membership to continue at Vegvisir. Discuss avenues to relieve the financial burden such as FSA/HSA accounts, and if they were referred by TIRR, discuss options with TIRR directly."
       ],
       "source": "text",
       "addedAt": "2026-07-15T00:00:00.000Z"
