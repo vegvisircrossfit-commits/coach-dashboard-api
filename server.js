@@ -829,6 +829,19 @@ app.post("/admin/update-anchor", (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get("/admin/clear-wod-cache", (req, res) => {
+  wodsCache = null;
+  wodsCacheTime = 0;
+  try {
+    if (fs.existsSync(WODS_DISK_CACHE)) {
+      fs.unlinkSync(WODS_DISK_CACHE);
+      res.json({ ok: true, message: "WOD cache cleared — next /wods call will refetch from GitHub" });
+    } else {
+      res.json({ ok: true, message: "No disk cache to clear" });
+    }
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get("/admin/build-roster", async (req, res) => {
   res.json({ ok: true, message: "Building roster..." });
   buildRosterCache();
@@ -1007,11 +1020,18 @@ async function getWodsFromGitHub() {
     throw new Error(`WODs JSON parse failed: ${e.message} (received ${text.length} chars, starts: ${text.slice(0,50)})`);
   }
 
+  // Validate before caching
+  if (!data.workouts || !Array.isArray(data.workouts) || data.workouts.length < 100) {
+    throw new Error(`WODs data invalid: got ${data.workouts?.length || 0} workouts`);
+  }
   // Save to disk and memory
   wodsCache = data;
   wodsCacheTime = now;
-  try { fs.writeFileSync(WODS_DISK_CACHE, JSON.stringify(data)); } catch(e) {}
-  console.log(`[WODs] Fetched and cached ${data.workouts?.length} workouts`);
+  try {
+    fs.writeFileSync(WODS_DISK_CACHE, JSON.stringify(data));
+    console.log(`[WODs] Saved ${data.workouts.length} workouts to disk cache`);
+  } catch(e) { console.error('[WODs] Disk cache write failed:', e.message); }
+  console.log(`[WODs] Fetched and cached ${data.workouts.length} workouts`);
   return data;
 }
 
