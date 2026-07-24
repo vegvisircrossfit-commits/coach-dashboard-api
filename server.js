@@ -955,26 +955,58 @@ app.delete("/playbook/sop/:key", async (req, res) => {
 
 const WODS_FILE = "wods.json";
 
-// Cache WODs in memory — refresh once per day
+// WODs: fetch from GitHub once, cache in memory for 24 hours
+// Uses streaming JSON parse to handle large file reliably
 let wodsCache = null;
 let wodsCacheTime = 0;
-const WODS_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const WODS_CACHE_TTL = 24 * 60 * 60 * 1000;
+const WODS_DISK_CACHE = '/tmp/wods_cache.json';
 
 async function getWodsFromGitHub() {
   const now = Date.now();
+
+  // Memory cache hit
   if (wodsCache && (now - wodsCacheTime) < WODS_CACHE_TTL) {
-    console.log('[WODs] Serving from cache');
     return wodsCache;
   }
+
+  // Disk cache hit (survives memory resets)
+  if (fs.existsSync(WODS_DISK_CACHE)) {
+    try {
+      const stat = fs.statSync(WODS_DISK_CACHE);
+      if ((now - stat.mtimeMs) < WODS_CACHE_TTL) {
+        console.log('[WODs] Loading from disk cache...');
+        const raw = fs.readFileSync(WODS_DISK_CACHE, 'utf8');
+        wodsCache = JSON.parse(raw);
+        wodsCacheTime = now;
+        console.log(`[WODs] Disk cache hit: ${wodsCache.workouts?.length} workouts`);
+        return wodsCache;
+      }
+    } catch(e) { console.log('[WODs] Disk cache invalid, refetching'); }
+  }
+
+  // Fetch from GitHub
   console.log('[WODs] Fetching from GitHub...');
   const resp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/${WODS_FILE}`, {
     headers: { Authorization: `Bearer ${GITHUB_TOKEN}` }
   });
   if (!resp.ok) throw new Error(`GitHub WODs fetch failed: ${resp.status}`);
-  const data = await resp.json();
+
+  const text = await resp.text();
+  console.log(`[WODs] Received ${text.length} chars from GitHub`);
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch(e) {
+    throw new Error(`WODs JSON parse failed: ${e.message} (received ${text.length} chars, starts: ${text.slice(0,50)})`);
+  }
+
+  // Save to disk and memory
   wodsCache = data;
   wodsCacheTime = now;
-  console.log(`[WODs] Cached ${data.workouts?.length || 0} workouts`);
+  try { fs.writeFileSync(WODS_DISK_CACHE, JSON.stringify(data)); } catch(e) {}
+  console.log(`[WODs] Fetched and cached ${data.workouts?.length} workouts`);
   return data;
 }
 
