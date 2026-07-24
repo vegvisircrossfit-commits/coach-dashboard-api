@@ -987,9 +987,14 @@ async function getWodsFromGitHub() {
 
   // Fetch from GitHub
   console.log('[WODs] Fetching from GitHub...');
-  const resp = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/${WODS_FILE}`, {
-    headers: { Authorization: `Bearer ${GITHUB_TOKEN}` }
+  // For large files, use GitHub API with download_url which handles auth properly
+  const metaResp = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${WODS_FILE}`, {
+    headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' }
   });
+  if (!metaResp.ok) throw new Error(`GitHub meta fetch failed: ${metaResp.status}`);
+  const meta = await metaResp.json();
+  // Use download_url for the actual content — avoids base64 encoding issues
+  const resp = await fetch(meta.download_url);
   if (!resp.ok) throw new Error(`GitHub WODs fetch failed: ${resp.status}`);
 
   const text = await resp.text();
