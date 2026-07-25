@@ -206,7 +206,40 @@
     var nmi=useState(''); var newMovementInput=nmi[0]; var setNewMovementInput=nmi[1];
     var is=useState(null); var importStatus=is[0]; var setImportStatus=is[1];
     var ss=useState('saved'); var saveStatus=ss[0]; var setSaveStatus=ss[1];
-    var fileRef=useRef(); var saveTimer=useRef();
+    var fileRef=useRef(); var saveTimer=useRef(); var wodsUploadRef=useRef();
+
+    var handleWodsUpload=function(e){
+      var file=e.target.files&&e.target.files[0]; if(!file) return;
+      setImportStatus({type:'info',msg:'Uploading WOD library to server…'});
+      var reader=new FileReader();
+      reader.onload=function(evt){
+        try {
+          var data=JSON.parse(evt.target.result);
+          if(!data.workouts||!data.workouts.length){setImportStatus({type:'error',msg:'Invalid wods.json file'});return;}
+          // Upload in chunks of 500 workouts to avoid body size limits
+          var CHUNK=500;
+          var chunks=[];
+          for(var i=0;i<data.workouts.length;i+=CHUNK) chunks.push(data.workouts.slice(i,i+CHUNK));
+          setImportStatus({type:'info',msg:'Uploading '+data.workouts.length+' workouts in '+chunks.length+' chunks…'});
+          // Upload all at once — server handles 10mb
+          fetch('https://coach-dashboard-api.onrender.com/admin/upload-wods',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({workouts:data.workouts})
+          }).then(function(r){return r.json();})
+          .then(function(d){
+            if(d.ok){
+              setImportStatus({type:'success',msg:'✓ Uploaded '+d.count+' workouts to server'});
+              // Reload workouts
+              fetch('https://coach-dashboard-api.onrender.com/wods').then(function(r){return r.json();}).then(function(d2){if(d2.workouts)setWorkouts(d2.workouts);});
+            } else {
+              setImportStatus({type:'error',msg:'Upload failed: '+(d.error||'unknown error')});
+            }
+          }).catch(function(err){setImportStatus({type:'error',msg:'Upload error: '+err.message});});
+        } catch(err){setImportStatus({type:'error',msg:'JSON parse error: '+err.message});}
+      };
+      reader.readAsText(file);
+      e.target.value='';
+    };
 
     useEffect(function(){
       fetch('https://coach-dashboard-api.onrender.com/wods')
@@ -295,6 +328,8 @@
             h('div',{style:{display:'flex',gap:6}},
               h('button',{className:'btn',onClick:function(){fileRef.current&&fileRef.current.click();},style:{background:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'⬆ Import'),
               h('input',{ref:fileRef,type:'file',accept:'.xlsx,.xls,.csv',style:{display:'none'},onChange:handleFile}),
+              h('button',{className:'btn',onClick:function(){wodsUploadRef.current&&wodsUploadRef.current.click();},style:{background:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'☁ Sync'),
+              h('input',{ref:wodsUploadRef,type:'file',accept:'.json',style:{display:'none'},onChange:handleWodsUpload}),
               h('button',{className:'btn',onClick:function(){setShowAddForm(function(p){return !p;});},style:{background:showAddForm?'#222':C.accent,color:'#fff',padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3}},showAddForm?'✕ Cancel':'+ Add WOD')
             )
           )
