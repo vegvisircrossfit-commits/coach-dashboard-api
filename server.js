@@ -851,12 +851,15 @@ app.post("/admin/upload-wods", express.json({ limit: "10mb" }), async (req, res)
         seen.set(key, w);
       }
     }
-    const deduped = { workouts: Array.from(seen.values()), version: 1, lastUpdated: new Date().toISOString() };
-    fs.writeFileSync(WODS_PERSISTENT, JSON.stringify(deduped));
-    wodsCache = deduped;
-    console.log(`[WODs] Uploaded and saved ${deduped.workouts.length} workouts`);
-    res.json({ ok: true, count: deduped.workouts.length });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+    const workouts = Array.from(seen.values());
+    console.log(`[WODs] Writing ${workouts.length} workouts to Sheet...`);
+    await writeWodsToSheet(workouts);
+    console.log(`[WODs] Written to Sheet successfully`);
+    res.json({ ok: true, count: workouts.length, storage: 'Google Sheet' });
+  } catch(e) {
+    console.error('[WODs] Upload error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get("/admin/build-roster", async (req, res) => {
@@ -983,28 +986,63 @@ app.delete("/playbook/sop/:key", async (req, res) => {
 // WOD LIBRARY — GitHub-backed shared storage
 // ══════════════════════════════════════════════════════════════════════════════
 
-const WODS_FILE = "wods.json";
-const WODS_PERSISTENT = '/tmp/wods_persistent.json'; // uploaded once via /admin/upload-wods
 
-// WODs are served from a file uploaded directly to Render via /admin/upload-wods
-// This avoids GitHub large file truncation issues entirely
+// ══════════════════════════════════════════════════════════════════════════════
+// WODS — Google Sheet backed storage (tab: "wods")
+// ══════════════════════════════════════════════════════════════════════════════
+
 let wodsCache = null;
 
-async function getWods() {
+async function getWodsFromSheet() {
   if (wodsCache) return wodsCache;
-  if (fs.existsSync(WODS_PERSISTENT)) {
-    try {
-      console.log('[WODs] Loading from persistent storage...');
-      const raw = fs.readFileSync(WODS_PERSISTENT, 'utf8');
-      const data = JSON.parse(raw);
-      if (data.workouts?.length > 100) {
-        wodsCache = data;
-        console.log(`[WODs] Loaded ${data.workouts.length} workouts`);
-        return data;
-      }
-    } catch(e) { console.error('[WODs] Persistent load failed:', e.message); }
-  }
-  throw new Error('WOD library not uploaded yet — use /admin/upload-wods to upload wods.json');
+  const result = await sheetsGet('WODS!A1:J10000');
+  const rows = result.values || [];
+  if (rows.length < 2) return { workouts: [] };
+  const headers = rows[0];
+  const workouts = rows.slice(1).map(row => {
+    const w = {};
+    headers.forEach((h, i) => w[h] = row[i] || '');
+    return {
+      id: w.id, name: w.name, type: w.type, date: w.date,
+      movements: w.movements ? w.movements.split(',').filter(Boolean) : [],
+      duration: parseInt(w.duration) || 0,
+      weightMin: parseInt(w.weightMin) || 0,
+      weightMax: parseInt(w.weightMax) || 0,
+      partner: w.partner === '1',
+      description: w.description || ''
+    };
+  }).filter(w => w.name);
+  wodsCache = { workouts, version: 1 };
+  console.log(`[WODs] Loaded ${workouts.length} workouts from Sheet`);
+  return wodsCache;
+}
+
+async function writeWodsToSheet(workouts) {
+  const token = await getGoogleToken();
+  // Clear existing data first
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/WODS!A1:J10000:clear`, {
+    method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  });
+  // Write header + all rows
+  const headers = ['id','name','type','date','movements','duration','weightMin','weightMax','partner','description'];
+  const rows = [headers, ...workouts.map(w => [
+    w.id||'', w.name||'', w.type||'', w.date||'',
+    Array.isArray(w.movements) ? w.movements.join(',') : (w.movements||''),
+    w.duration||0, w.weightMin||0, w.weightMax||0,
+    w.partner ? '1' : '', (w.description||'').slice(0,200)
+  ])];
+  const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent('WODS!A1')}?valueInputOption=USER_ENTERED`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: rows })
+  });
+  const result = await resp.json();
+  wodsCache = null; // invalidate cache
+  return result;
+}
+
+async function getWods() {
+  return getWodsFromSheet();
 }
 
 app.get("/wods", async (req, res) => {
