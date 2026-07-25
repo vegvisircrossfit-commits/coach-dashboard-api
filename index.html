@@ -210,34 +210,42 @@
 
     var handleWodsUpload=function(e){
       var file=e.target.files&&e.target.files[0]; if(!file) return;
-      setImportStatus({type:'info',msg:'Uploading WOD library to server…'});
+      setImportStatus({type:'info',msg:'Reading file…'});
+      var isXlsx=file.name.match(/\.xlsx?$/i);
       var reader=new FileReader();
       reader.onload=function(evt){
         try {
-          var data=JSON.parse(evt.target.result);
-          if(!data.workouts||!data.workouts.length){setImportStatus({type:'error',msg:'Invalid wods.json file'});return;}
-          // Upload in chunks of 500 workouts to avoid body size limits
-          var CHUNK=500;
-          var chunks=[];
-          for(var i=0;i<data.workouts.length;i+=CHUNK) chunks.push(data.workouts.slice(i,i+CHUNK));
-          setImportStatus({type:'info',msg:'Uploading '+data.workouts.length+' workouts in '+chunks.length+' chunks…'});
-          // Upload all at once — server handles 10mb
+          var workouts=[];
+          if(isXlsx){
+            // Parse xlsx using XLSX library
+            var wb=XLSX.read(evt.target.result,{type:'array'});
+            var ws=wb.Sheets[wb.SheetNames[0]];
+            var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+            if(!rows.length){setImportStatus({type:'error',msg:'Spreadsheet appears empty.'});return;}
+            var parsed=parseRows(rows);
+            workouts=parsed.workouts;
+            setImportStatus({type:'info',msg:'Parsed '+workouts.length+' workouts, uploading to Sheet…'});
+          } else {
+            var data=JSON.parse(evt.target.result);
+            workouts=data.workouts||[];
+            setImportStatus({type:'info',msg:'Uploading '+workouts.length+' workouts to Sheet…'});
+          }
+          if(!workouts.length){setImportStatus({type:'error',msg:'No workouts found in file'});return;}
           fetch('https://coach-dashboard-api.onrender.com/admin/upload-wods',{
             method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({workouts:data.workouts})
+            body:JSON.stringify({workouts:workouts})
           }).then(function(r){return r.json();})
           .then(function(d){
             if(d.ok){
-              setImportStatus({type:'success',msg:'✓ Uploaded '+d.count+' workouts to server'});
-              // Reload workouts
+              setImportStatus({type:'success',msg:'✓ Saved '+d.count+' workouts to Google Sheet'});
               fetch('https://coach-dashboard-api.onrender.com/wods').then(function(r){return r.json();}).then(function(d2){if(d2.workouts)setWorkouts(d2.workouts);});
             } else {
               setImportStatus({type:'error',msg:'Upload failed: '+(d.error||'unknown error')});
             }
           }).catch(function(err){setImportStatus({type:'error',msg:'Upload error: '+err.message});});
-        } catch(err){setImportStatus({type:'error',msg:'JSON parse error: '+err.message});}
+        } catch(err){setImportStatus({type:'error',msg:'File error: '+err.message});}
       };
-      reader.readAsText(file);
+      if(isXlsx) reader.readAsArrayBuffer(file); else reader.readAsText(file);
       e.target.value='';
     };
 
@@ -329,7 +337,7 @@
               h('button',{className:'btn',onClick:function(){fileRef.current&&fileRef.current.click();},style:{background:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'⬆ Import'),
               h('input',{ref:fileRef,type:'file',accept:'.xlsx,.xls,.csv',style:{display:'none'},onChange:handleFile}),
               h('button',{className:'btn',onClick:function(){wodsUploadRef.current&&wodsUploadRef.current.click();},style:{background:C.navy3,color:C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},'☁ Sync'),
-              h('input',{ref:wodsUploadRef,type:'file',accept:'.json',style:{display:'none'},onChange:handleWodsUpload}),
+              h('input',{ref:wodsUploadRef,type:'file',accept:'.json,.xlsx,.xls',style:{display:'none'},onChange:handleWodsUpload}),
               h('button',{className:'btn',onClick:function(){setShowAddForm(function(p){return !p;});},style:{background:showAddForm?'#222':C.accent,color:'#fff',padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3}},showAddForm?'✕ Cancel':'+ Add WOD')
             )
           )
