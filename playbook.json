@@ -2003,8 +2003,63 @@
       ],
       "source": "text",
       "addedAt": "2026-07-15T00:00:00.000Z"
+    },
+    "sop_gate_latch_stuck_001": {
+      "title": "Gate Latch Stuck \u2014 Fix",
+      "category": "Grounds",
+      "summary": "If the gate latch is extended and stuck beyond the gate frame (door closed too fast), use a credit card or the gate code plus firm pressure to retract the latch and close the gate.",
+      "steps": [
+        "This happens when the gate closed too quickly and the latch extended past the plate, getting wedged between the plate at the top of the gate and the frame itself.",
+        "OPTION 1 \u2014 Credit Card Method: slide a credit card or flat card against the latch at an angle and push the latch inward until it retracts enough to close the gate.",
+        "OPTION 2 \u2014 Gate Code Method: enter the gate code on the other side of the gate. Twist the knob hard while slowly pushing the gate forward just slightly \u2014 enough to create a little give. Do NOT push so hard that the top plate breaks. As you keep twisting, the latch should retract on its own and the gate should close normally."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_parking_block_post_001": {
+      "title": "Parking Block Metal Post Sticking Up \u2014 Fix",
+      "category": "Maintenance",
+      "summary": "If a metal post from a concrete parking block is poking out, hammer it flush with the block. Be careful not to crack the concrete.",
+      "steps": [
+        "Go to the supply closet and find the hammer in the tool drawer \u2014 the mesh bucket on the 3rd shelf of the chrome shelving unit.",
+        "Walk outside to the parking block with the protruding metal post.",
+        "Hammer the metal post down until it is flush with the surface of the concrete block.",
+        "Be careful not to strike the concrete itself \u2014 only hit the metal post. Stop as soon as it is flush.",
+        "Return the hammer to the tool drawer."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_bring_a_friend_followup_001": {
+      "title": "Bring a Friend \u2014 Post-Event Follow-Up Text",
+      "category": "Sales & Member Ops",
+      "summary": "After a friend attends a Bring a Friend event, send a follow-up text to gauge their experience and guide them toward a consultation or future event.",
+      "steps": [
+        "After the event, send the friend the following text: 'Hey FIRST NAME! This is Coach COACH NAME from Vegvisir CrossFit. How was your workout with us today?'",
+        "IF THEY RESPOND POSITIVELY: reply with \u2014 'I am glad to hear it! Would you like to hear more about joining the Vegvisir family, or will we catch you at the next Vegvisir family event?'",
+        "IF THEY WANT TO LEARN MORE ABOUT JOINING: set up a consultation time and treat them as a regular lead from that point forward (refer to the First Call Script SOP and NSI SOP).",
+        "IF THEY RESPOND NEGATIVELY AT ANY POINT: respond with empathy following our gym values. Try to help problem-solve in the best way you can. Let Kidd know of any issues so they can be addressed."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_hsa_fsa_001": {
+      "title": "HSA/FSA \u2014 How to Help an Athlete Use It",
+      "category": "Sales & Member Ops",
+      "summary": "Athletes can use HSA or FSA to cover up to 30% of their membership cost through Truemed. Send them the qualification link and help them understand their two payment options.",
+      "steps": [
+        "If an athlete asks how to use their HSA or FSA, send them this link: https://app.truemed.com/crossfit/qualify/tm_qual_qlqzxf3ea5",
+        "Tell them: 'Go ahead and fill out the survey at that link \u2014 Truemed will take care of the rest for you!'",
+        "IF THEY ASK ABOUT HOW PAYMENT WORKS, explain there are 2 options depending on how their HSA/FSA account is set up:",
+        "OPTION 1 \u2014 HSA/FSA Card: they pay directly with their HSA or FSA card and Truemed handles the tax documentation on the back end.",
+        "OPTION 2 \u2014 Regular Payment + Reimbursement: they pay normally and Truemed reimburses them approximately 30% afterward.",
+        "Let them know they will need to confirm which method applies to their specific HSA or FSA account \u2014 this part has to be handled on their end, but the Truemed link is how they get the 30% applied.",
+        "If they have further questions about their specific plan, encourage them to contact their HSA/FSA provider directly."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
     }
   },
-  "lastUpdated": "2026-07-15T00:00:00.000Z",
+  "lastUpdated": "2026-07-16T00:00:00.000Z",
   "version": 3
 }
