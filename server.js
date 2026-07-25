@@ -845,7 +845,9 @@ app.post("/admin/upload-wods", express.json({ limit: "10mb" }), async (req, res)
     // Deduplicate by name, keep most recent
     const seen = new Map();
     for (const w of data.workouts) {
-      const key = (w.name || '').toLowerCase().trim();
+      const nameStr = String(w.name || '').trim();
+      if (!nameStr) continue;
+      const key = nameStr.toLowerCase();
       const existing = seen.get(key);
       if (!existing || (w.date && (!existing.date || w.date > existing.date))) {
         seen.set(key, w);
@@ -1011,7 +1013,7 @@ async function getWodsFromSheet() {
       partner: w.partner === '1',
       description: w.description || ''
     };
-  }).filter(w => w.name);
+  }).filter(w => w.name && typeof w.name === 'string' && w.name.trim().length > 0);
   wodsCache = { workouts, version: 1 };
   console.log(`[WODs] Loaded ${workouts.length} workouts from Sheet`);
   return wodsCache;
@@ -1052,9 +1054,10 @@ app.get("/wods", async (req, res) => {
     const workouts = wods.workouts || [];
     const seen = new Map();
     for (const w of workouts) {
-      const key = w.name.toLowerCase().trim();
+      const nameStr = String(w.name || '').trim();
+      if (!nameStr) continue;
+      const key = nameStr.toLowerCase();
       const existing = seen.get(key);
-      // Keep entry with a date if available, otherwise keep first seen
       if (!existing || (!existing.date && w.date) || (w.date && w.date > existing.date)) {
         seen.set(key, w);
       }
