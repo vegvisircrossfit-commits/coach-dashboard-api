@@ -2058,8 +2058,31 @@
       ],
       "source": "text",
       "addedAt": "2026-07-16T00:00:00.000Z"
-    }
-  },
-  "lastUpdated": "2026-07-16T00:00:00.000Z",
-  "version": 3
-}
+    },
+    "sop_remote_programming_principles_001": {
+      "title": "Remote Programming \u2014 Core Principles",
+      "category": "Coaching",
+      "summary": "The overarching principles for writing remote programming for any client. If these are followed, clients stay. If any one of them fails, that is usually why a remote client leaves.",
+      "steps": [
+        "CORE PRINCIPLE: Every remote workout must do three things \u2014 (1) you can explain to the athlete how it helps their specific goals, (2) you can explain the intention of the workout and how it gets them closer to their goals that day, and (3) it actually does get them closer to their goals. If all three are true, the athlete will feel confident every time they open their programming because they trust it will make them better. They will stay motivated and see results over time. If any one of these three fails, that is typically why a remote client leaves.",
+        "VARIETY: You can follow the same weekly structure and repeat similar movements cycle to cycle, but add variety each week by adjusting reps, weights, or workout format. Clients do get bored, so small changes go a long way. The structure can stay the same \u2014 the details should evolve.",
+        "PROGRESSIVE OVERLOAD: The default progression system is 6 to 12 reps. Start movements at 6 reps and increase by 1 rep each week as the athlete completes everything as written. Once they reach 12 reps, increase the weight, drop back to 6 reps, and begin the cycle again. This typically runs in 8-week cycles before movements are refreshed.",
+        "WEEKLY DEADLINE: All remote programming must be completed and uploaded to TrueCoach before Monday at 4 PM. Athletes typically begin their week after that point. Earlier is always better \u2014 ideally the week before.",
+        "VIDEO LINKS: Every movement in a remote program should have a video attached so the athlete always knows exactly how to perform it correctly.",
+        "NOTES AND ADJUSTMENTS: Use the notes field in TrueCoach to give context \u2014 if an athlete reported soreness, offer a scaling option. If they hit a milestone, acknowledge it. If something is new, explain why it is being introduced. These small touches are what separate good remote programming from great remote programming."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_remote_programming_home_gym_001": {
+      "title": "Remote Programming \u2014 Home Gym Client (Brendan-Type)",
+      "category": "Coaching",
+      "summary": "How to program for a busy professional training at home with limited equipment. Focus on mobility, tennis or sport performance, and progressive strength with 10 minutes of high-intensity cardio at the end. All programming must work within available equipment.",
+      "steps": [
+        "CLIENT PROFILE \u2014 Brendan Type: Busy professional (4 workouts per week), sport-specific goals (tennis), mobility limitations (thoracic spine tightness, limited ankle flexion from prior Achilles injury), limited home equipment. Goals: feel better, play tennis longer, reduce injury risk.",
+        "WEEKLY STRUCTURE: Monday, Tuesday, Thursday, Friday = strength + metcon days. Wednesday = 30-minute easy bike (nasal breathing focus) + mobility work. Saturday = reminder to play tennis. Sunday = recovery/mobility workout.",
+        "EQUIPMENT TO PROGRAM AROUND: Echo bike, low pull-up bar (usable for rows), adjustable incline bench, dumbbells 5-35 lbs, 25 lb kettlebell, resistance bands (10-40 lbs circular), 16-inch box, mobility wedge for ankle flexion, foam rollers. Note: Bowflex dumbbells up to 45 lbs are available but unreliable for explosive movements \u2014 keep Metcon weights at 35 lbs or below for safety.",
+        "STRENGTH STRUCTURE: 3 movements x 3 sets each. Focus on single-leg balance work (for tennis), calf strength, knee stability, chest and shoulder strength. Use the 6-to-12 rep progressive overload system. Attach a video to every movement.",
+        "METCON STRUCTURE: 10 minutes of high-intensity cardio at the end of the session. Use AMRAP or EMOM formats. Build around available equipment \u2014 bike calories, dumbbell incline bench press, etc. Keep it short and intense. Example: For Time \u2014 15 cal bike / 15 DB incline bench press at 20 lbs, 10 cal / 10 DB bench, 5 cal / 5 DB bench.",
+        "MOBILITY DAYS: 30-minute easy air bike (nasal breathing). Change mobility drills slightly each week to keep it fresh \u2014 alternate between standing and quadruped hip CARs, focus primarily on thoracic spine and hip mobility, include ankle flexion work using the wedge.",
+        "WEEKLY COPY PROCESS IN TRUECOACH: Check the boxes at the top of each TrueCoach workout block, hit Command+C (Mac) or Ctrl+C (PC) to copy, then paste to the following week. Re
