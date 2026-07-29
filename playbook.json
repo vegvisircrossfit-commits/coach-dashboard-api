@@ -2140,6 +2140,134 @@
       ],
       "source": "text",
       "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_coaching_checklist_l1_001": {
+      "title": "Level 1 Coaching Checklist",
+      "category": "Coaching",
+      "summary": "The foundational checklist every coach must complete every class. Master Level 1 before advancing to Level 2.",
+      "steps": [
+        "Show up 15 minutes prior to class.",
+        "Welcome each athlete by name as they walk in the door. Ask how they are feeling.",
+        "Class starts on time.",
+        "Warm-up is briefed by couplet or triplet \u2014 NOT the whole thing at once.",
+        "Movements are shown correctly before starting the warm-up.",
+        "Every athlete is given at least one cue or checked in on during the warm-up.",
+        "Strength portion movements are demonstrated correctly before athletes begin.",
+        "Athletes are asked if they want to know their numbers.",
+        "All athletes are moving safely during strength \u2014 correct anyone who is not.",
+        "Numbers are recorded on each athlete's profile after their last lift.",
+        "MetCon brief is read aloud and all scales are described.",
+        "All athlete questions are answered before the MetCon starts.",
+        "All athletes are moving safely during the MetCon \u2014 correct anyone who is not.",
+        "Scores are recorded for each athlete after the MetCon is done. Record exact scales used.",
+        "Post-WOD stretch is demoed.",
+        "A timer is set for each portion of the workout following the workout plan and times.",
+        "Class ends on time.",
+        "Athletes are told: 'See you next time, NAME.'",
+        "Bright Spot Friday is done during the last 3 minutes of class on Fridays.",
+        "No phone use throughout class.",
+        "All equipment used in class is returned to its proper spot.",
+        "Coach is wearing a shirt that says Vegvisir CrossFit or CrossFit \u2014 no other gym's CrossFit gear.",
+        "Upcoming events are gone over every class.",
+        "Athletes are given their numbers as soon as the brief is finished.",
+        "Athletes are told: 'See you tomorrow, NAME.'"
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_coaching_checklist_l2_001": {
+      "title": "Level 2 Coaching Checklist",
+      "category": "Coaching",
+      "summary": "Level 2 builds on Level 1 with purposeful cueing, focused points of performance, and higher-quality athlete interactions. Must complete all of Level 1 first.",
+      "steps": [
+        "All of Level 1.",
+        "At least one movement in the warm-up brief is given a purpose that connects to the upcoming strength and/or MetCon.",
+        "All cues are 14 words or less.",
+        "At least one point of performance is highlighted during the brief, demonstrated correctly, and explained in terms of how it will help athletes in the future.",
+        "Cues are given to each athlete during the strength portion.",
+        "At least one point of performance is given for the MetCon on one movement \u2014 explained in terms of how it will help athletes during the MetCon and in future goals.",
+        "All athlete questions are answered in 14 words or less.",
+        "All athletes are cued at least once during the MetCon to improve virtuosity of movement.",
+        "Post-WOD stretch starts with at least 3 minutes left in class.",
+        "Any PRs in class are written up on the PR Board.",
+        "Fist bump every athlete after the MetCon.",
+        "Coach gives at least one compliment to each athlete during class.",
+        "Athletes are told to clean up their stuff at the end of class \u2014 hold them accountable. No one leaves without cleaning up.",
+        "Birthdays are congratulated at the beginning of class."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_coaching_checklist_l3_001": {
+      "title": "Level 3 Coaching Checklist",
+      "category": "Coaching",
+      "summary": "Level 3 introduces goal-based coaching, tighter cues, and deeper athlete connection. Must complete all of Level 1 and 2 first.",
+      "steps": [
+        "All of Level 1 and Level 2.",
+        "All athletes are asked how they are feeling AND what their goal for today's class is.",
+        "At least one movement in EACH warm-up couplet/triplet is given a purpose connecting it to the strength and/or MetCon.",
+        "All cues are 9 words or less.",
+        "Coach gives cues to each athlete during the warm-up.",
+        "All athletes are given an intention to chase during the strength portion that relates to their goal for the day.",
+        "All cues given during strength are reassessed on each athlete to confirm the cue worked and has been maintained.",
+        "Coach gives at least one compliment to each athlete during the strength portion.",
+        "Coach sets a countdown timer or gives a verbal countdown for how long athletes have to put away their bars and equipment.",
+        "Each athlete is given an intention for the MetCon based on their goal for the day.",
+        "At least one SPECIFIC compliment is given to each athlete. ('I love how you are...' counts. 'You're doing great' does not.)",
+        "Motivation Monday is held during the stretch: 'What are we all wanting to accomplish this week? It could be anything from buy a banana to climb Mount Everest!'",
+        "All athletes receive one compliment on their way out the door.",
+        "Individual athletes are invited to upcoming events in a personal way. Example: 'Hey, you have a dog \u2014 why don't you sign up for our monthly dog walk group!'"
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_coaching_checklist_l4_001": {
+      "title": "Level 4 Coaching Checklist",
+      "category": "Coaching",
+      "summary": "Level 4 raises the standard with full visual coverage, pre-class preparation, and tighter cues. Must complete all of Level 1, 2, and 3 first.",
+      "steps": [
+        "All of Level 1, Level 2, and Level 3.",
+        "Coach sees every athlete during every set of the warm-up.",
+        "Every movement in the warm-up is given meaning that connects to the workout later in class.",
+        "All cues are 5 words or less.",
+        "Boards with athlete numbers for the strength portion are written before class and handed out to athletes at the end of the warm-up and before the strength brief.",
+        "Rowers and/or bikes are pulled out for the total number of people in class before class starts.",
+        "Coach gives a cue AND a compliment to each athlete during the warm-up.",
+        "Coach gives at least 2 compliments to each athlete during the strength portion.",
+        "At least two athletes at the end of class are told about a future workout in the week that will help them with something that was worked on during class.",
+        "No athlete phone use throughout class."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_coaching_checklist_l5_001": {
+      "title": "Level 5 Coaching Checklist",
+      "category": "Coaching",
+      "summary": "Level 5 is the highest standard of coaching at Vegvisir. Every athlete is coached as an individual with full connection to their journey and goals. Must complete all of Level 1, 2, 3, and 4 first.",
+      "steps": [
+        "All of Level 1, Level 2, Level 3, and Level 4.",
+        "Each athlete is addressed during the warm-up by connecting movements to their overall journey and goals. Example: 'We are doing this because we have been working on X to improve Y.'",
+        "Visual, tactile, and short verbal cues (5 words or less) are all used throughout the day. At least one of each type is used in the warm-up, strength, and MetCon.",
+        "Coach asks each athlete about how a Work, Family, Hobby, or Friend thing is going \u2014 showing genuine personal interest.",
+        "Coach helps athletes clean up their weights and makes sure everything ends up in the proper spots.",
+        "Athletes are asked to take out and put up the correct number of rowers, bikes, and boxes for the next class.",
+        "Texts are sent after class to athletes who did not show up \u2014 reach out to get them to schedule their next classes."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_no_coaching_while_training_001": {
+      "title": "Can I Work Out In a Class I'm Coaching?",
+      "category": "Coaching",
+      "summary": "No. When we coach, we coach. When we train, we train. These are two separate roles and cannot be done simultaneously.",
+      "steps": [
+        "No \u2014 you cannot work out in a class you are coaching.",
+        "When we coach, we coach. When we train, we train. These are two entirely separate responsibilities.",
+        "Even with just one athlete, your responsibility is to provide the best possible coaching experience for them. You cannot coach well with your heart rate at 150 bpm.",
+        "If you want to train, do it outside of your coaching hours."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
     }
   },
   "lastUpdated": "2026-07-16T00:00:00.000Z",
