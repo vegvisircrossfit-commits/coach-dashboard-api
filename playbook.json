@@ -2268,6 +2268,91 @@
       ],
       "source": "text",
       "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_coaching_main_class_programming_001": {
+      "title": "Programming Main Class Workouts",
+      "category": "Coaching",
+      "summary": "The full system for programming main class workouts at Vegvisir. Covers new cycle setup, week-to-week programming, Metcon selection, progressive overload, testing week, and monthly coach prep.",
+      "steps": [
+        "SETUP: Keep two tabs open at all times \u2014 app.wodify.com (where programming is entered) and coach-dashboard-api.onrender.com (the WOD Search tab, used to look up historical workouts, filter by time domain, and pull past notes/RPE). There are two modes: New Cycle Start and Continuous Programming. Cycles run 8 weeks.",
+        "NEW CYCLE \u2014 STEP 1: Review the last cycle before deciding anything. Check Slack for how check-ins have been trending. Check Gym Lead Machine for member messages that should influence programming. Walk the floor and coach classes to note common faults you are seeing live.",
+        "NEW CYCLE \u2014 STEP 2: Pick exactly 3 goals for the cycle \u2014 one from each bucket: 1 weightlifting focus (e.g. hip mobility in bottom of squat), 1 gymnastics focus (e.g. pulling strength toward muscle-up), 1 cardiovascular focus (e.g. short time-domain output).",
+        "NEW CYCLE \u2014 STEP 3: Select core lifts that build toward those 3 goals. Every cycle must always include: back squat, a pulling barbell movement (deadlift, clean pull, etc.), an Olympic lift, and a pressing movement. Bench press must appear at least every other cycle \u2014 skipping it two cycles in a row causes member pushback.",
+        "NEW CYCLE \u2014 STEP 4: Decide on a 6-, 7-, or 8-day rotating structure. 6-day = each lift moves backward one day per week. 7-day = lifts migrate around the week so regulars don't feel stuck doing the same Monday workout every week. 8-day = each lift moves forward one day per week.",
+        "NEW CYCLE \u2014 STEP 5: Program Week 1 in full, then copy it forward week to week in Wodify and adjust numbers for progressive overload.",
+        "PROGRESSIVE OVERLOAD (Strength): Start by establishing a rep max (e.g. 10-rep max back squat on Week 1). Then run 3 sets at ~70% of that max, increasing ~2% per week (72%, 74%...) until approaching theoretical max (~78%). Then drop to a lower rep scheme and repeat the climb. By the final testing week, be testing the exact quality built toward in Week 1.",
+        "CONTINUOUS PROGRAMMING \u2014 STEP 1: Bulk copy the previous week's full set of days forward onto the current week's dates in Wodify.",
+        "CONTINUOUS PROGRAMMING \u2014 STEP 2: Open each day and update the strength portion. Warm-up structure stays consistent for the lift of the day \u2014 only the Metcon-specific warm-up portion changes week to week. Update the working percentage per the overload plan. Keep coaching notes and comments \u2014 these should be dialed in during Week 1.",
+        "CONTINUOUS PROGRAMMING \u2014 STEP 3 (Metcon Selection): Every 3-day span must satisfy two independent rotations simultaneously. TIME DOMAIN: one Long (17+ min), one Medium (10-17 min), one Short (under 10 min). INTENSITY: one High (thrusters, burpee box jump-overs, squat cleans \u2014 fast and heart-rate-spiking), one Medium, one Skill/Light. These two rotations run in parallel \u2014 a workout's time domain and intensity are separate calls. Also avoid stacking same-movement-pattern days back to back. Use WOD Search to browse options filtered by the day's strength movement.",
+        "CONTINUOUS PROGRAMMING \u2014 STEP 4: Pull the chosen workout into Wodify. In WOD Search, filter history to find prior occurrences and copy notes forward \u2014 but verify they are still accurate. Confirm or set RPE. Set formatting to the standard template: time-domain header bolded, movements with prescribed loads, scaled options beneath. Set the time cap or goal rounds/reps. For EMOMs: coach scores if there are built-in rest periods; athlete scores if there are no rest periods. Add a post-WOD stretch targeting whatever muscle group the workout stressed most.",
+        "CONTINUOUS PROGRAMMING \u2014 STEP 5: Progressively overload the accessory work the same way as the main lift, unless it is pure stretching or mobility \u2014 that can stay static for the whole cycle.",
+        "CONTINUOUS PROGRAMMING \u2014 STEP 6: Add a short targeted warm-up piece that primes whatever the Metcon calls for. Keep total warm-up length under ~15 minutes.",
+        "TESTING WEEK AND CYCLE TRANSITION: The final week's tests should mirror exactly what Week 1 set out to build. Plan the next cycle before you get here \u2014 aim to always be thinking ~8 weeks ahead. Send member-facing communications: new cycle announcement, testing week hype content, explanation of how the programming serves the membership's goals, and direct response to any concerns members have raised.",
+        "MONTHLY COACHES MEETING (1st Saturday of every month): Come prepared ~4 weeks ahead with a list of any new or different movements appearing in warm-ups that month so coaches are never caught off guard mid-class.",
+        "STANDARD FOR DONE WELL: Before finalizing each week, ask yourself \u2014 would you personally be excited to walk in and do this programming? Would the gym's top 5 most engaged members be excited? If the honest answer is no, revise before publishing."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_coaching_head_programmer_role_task_001": {
+      "title": "Role & Task List \u2014 Head Programmer (Main Class Workouts)",
+      "category": "Coaching",
+      "summary": "Accountability checklist for the head programmer role. Covers weekly, per-cycle, and monthly non-negotiables plus the judgment standards that separate effective programming from just filling in workouts.",
+      "steps": [
+        "WEEKLY NON-NEGOTIABLES: Reviewed Slack check-ins for the week \u2014 noting whether results and feedback are trending favorable or flagging something to work on.",
+        "WEEKLY NON-NEGOTIABLES: Reviewed Gym Lead Machine for any member messages relevant to programming decisions.",
+        "WEEKLY NON-NEGOTIABLES: Spent time on the floor coaching and observing classes \u2014 not just building workouts from a desk.",
+        "WEEKLY NON-NEGOTIABLES: Every day programmed follows the 3-day balance rules (time domain mix, load mix, movement-pattern spacing, intensity spacing) \u2014 not just filling in a workout.",
+        "WEEKLY NON-NEGOTIABLES: Strength progression numbers updated correctly per the cycle's overload plan \u2014 not copy-pasted without adjustment.",
+        "WEEKLY NON-NEGOTIABLES: Historical notes and RPE checked and confirmed still accurate before reusing \u2014 not blindly copied forward.",
+        "WEEKLY NON-NEGOTIABLES: Warm-ups stay under ~15 minutes and are primed for that day's Metcon and strength focus.",
+        "PER-CYCLE NON-NEGOTIABLES (every 8 weeks): 3 cycle goals chosen \u2014 1 weightlifting, 1 gymnastics, 1 cardio \u2014 explicitly tied to member feedback and observed faults, not chosen arbitrarily.",
+        "PER-CYCLE NON-NEGOTIABLES: Cycle constants present \u2014 back squat, a pulling barbell movement, an Olympic lift, a pressing movement.",
+        "PER-CYCLE NON-NEGOTIABLES: Bench press included if it was skipped last cycle.",
+        "PER-CYCLE NON-NEGOTIABLES: Rotation structure (6/7/8-day) chosen deliberately.",
+        "PER-CYCLE NON-NEGOTIABLES: Testing week built to mirror Week 1's tested qualities.",
+        "PER-CYCLE NON-NEGOTIABLES: Next cycle already planned and drafted before current cycle's testing week arrives.",
+        "PER-CYCLE NON-NEGOTIABLES: Cycle-transition member communications sent \u2014 new cycle announcement, testing week hype, programming explanation content, response to any open member concerns.",
+        "MONTHLY NON-NEGOTIABLES: Coaches meeting prep completed by the 1st Saturday of the month \u2014 list of new or different movements coming up in the next month's warm-ups shared with coaches ahead of time.",
+        "JUDGMENT STANDARD \u2014 Planning horizon: thinks ~8 weeks ahead at all times. If programming feels reactive or last-minute, the role is not being run at standard.",
+        "JUDGMENT STANDARD \u2014 Willing to change course mid-plan: if a workout choice is not landing right, able to catch it and pivot rather than force the original plan through.",
+        "JUDGMENT STANDARD \u2014 Preserves institutional knowledge: does not rewrite notes and RPE from scratch each time a workout repeats. Pulls and verifies historical data so quality is consistent over time.",
+        "JUDGMENT STANDARD \u2014 Treats this as a retention tool, not a task to clear: programming is core to how members get results while having fun. It should be treated with weight.",
+        "JUDGMENT STANDARD \u2014 Self-check before publishing: would you be excited to do this week's programming yourself? Would the gym's top 5 most engaged members be excited? If the honest answer is no, it is not done.",
+        "JUDGMENT STANDARD \u2014 Comfortable driving change management: new movements, cycle transitions, and shifts in focus create friction for coaches and members if introduced without warning. This role owns getting ahead of that friction through coaches meeting prep and member communications."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_late_athletes_001": {
+      "title": "Handling Late Athletes \u2014 Protocol",
+      "category": "Coaching",
+      "summary": "Warm-up runs on a fixed schedule regardless of late arrivals. Athletes who show up late catch the next couplet or triplet. Very late athletes get a late warm-up sheet from the front desk. Warm-up always ends on time.",
+      "steps": [
+        "The warm-up runs on a fixed schedule. Each couplet or triplet of warm-up movements is done every 5 minutes regardless of who has arrived. Example for a 5 PM class: at 5:05 you are on the 2nd couplet or triplet, at 5:10 you are on the 3rd.",
+        "If an athlete shows up a few minutes late: they simply catch up on the next couplet or triplet. No special accommodation needed \u2014 athletes should expect this.",
+        "If an athlete shows up 7-10 minutes late: grab one of the late warm-up sheets from the front desk. Hand it to them and say: 'Hey, I am sorry you showed up late \u2014 do this and it will get you warmed up. If you have any questions let me know, but these should be movements you already know.'",
+        "Watch the late athlete as you would anyone else in class and help them get caught up with the same amount of attention you would give any other athlete during the warm-up.",
+        "The warm-up always ends on time. It does not stretch to accommodate late arrivals \u2014 ever."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_athlete_injury_decision_tree_001": {
+      "title": "Athlete Says Something Hurts \u2014 Decision Tree",
+      "category": "Coaching",
+      "summary": "How to handle an athlete reporting pain or injury. We cannot diagnose or prescribe \u2014 but we can adapt, facilitate, and bridge gaps. Covers acute vs. chronic, loss of power, tightness, and activation issues.",
+      "steps": [
+        "LEGAL BOUNDARY: We cannot diagnose injuries or prescribe a plan to fix them. We CAN execute plans given to us by licensed practitioners (PCPs, PTs, doctors) and we can adapt movement to work around limitations. Our knowledge bridges a lot of gaps \u2014 but stay in our lane.",
+        "STEP 1 \u2014 Is the injury ACUTE or PERSISTENT? Acute = something suddenly hurts when they move, and it hurts a lot. Persistent = it is just kind of always there.",
+        "ACUTE INJURY \u2014 STEP 2: Is there loss of power? Example: they try to press a dumbbell and suddenly cannot, or they try to sit down and cannot use that knee. If YES \u2014 this is a real injury requiring a medical professional. Tell them to see a doctor as soon as possible. If they choose to stay, adapt around that body part and do not let them work through it. If NO (just tightness when moving) \u2014 continue to the next step.",
+        "ACUTE INJURY (no loss of power, just tightness): Help them work around the tightness. Think about the body as a series of levers \u2014 muscles pull, they do not push. If their knee hurts and their knees are caving in during a squat, think about what connects to the knee and what is causing the cave. Do NOT have them lift heavy, jump, or do anything that loads that area. Instead, make a positional adjustment. Example: turn toes out and raise heels slightly to relieve a tight hip and allow a deeper, safer squat. This is within our scope.",
+        "PERSISTENT INJURY \u2014 STEP 2: Is it getting worse with movement or staying the same? If GETTING WORSE \u2014 adapt around it, do not let them use that body part in your care, and strongly recommend they see a doctor especially if it has lasted 2 or more weeks. If STAYING THE SAME (just an ongoing annoyance like an achy shoulder) \u2014 move to the next step.",
+        "PERSISTENT INJURY (not getting worse): This is usually a chronic movement fault \u2014 they have been moving incorrectly over a long period of time and it is building up. Identify how they are moving incorrectly. Example: knee soreness after workouts = too much pressure on the knee = likely knee cave during squats. This is an ACTIVATION issue. Do not have them add weight. Instead, give them a drill to feel the correct muscles firing. At the bottom of the squat, cue them to drive their knees out. Help them feel what it means to activate the right muscles. If they cannot feel it, give them drills until they can.",
+        "SUMMARY \u2014 Acute sharp pain with loss of power = send to a doctor. Acute tightness without loss of power = positional adaptation, no heavy loading. Persistent and getting worse = adapt around it and send to a doctor. Persistent but stable = activation work and movement correction."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-16T00:00:00.000Z"
     }
   },
   "lastUpdated": "2026-07-16T00:00:00.000Z",
