@@ -1010,7 +1010,12 @@ async function getWodsFromSheet() {
       duration: parseInt(w.duration) || 0,
       weightMin: parseInt(w.weightMin) || 0,
       weightMax: parseInt(w.weightMax) || 0,
-      partner: w.partner === '1' || w.partner === true || w.partner === 'true',
+      partner: (function(w) {
+        if (w.partner === '1' || w.partner === true || w.partner === 'true') return true;
+        // Re-detect from description if not flagged
+        var text = (w.description || '') + ' ' + (w.name || '');
+        return /you\s+go\s*\/\s*i\s+(rest|hold|go)|partner\s+(1\s*:|2\s*:|workout|wod)|with\s+a\s+partner|teams?\s+of\s+2|p1\s*[:\/]|p2\s*[:\/]|athlete\s+(1|2)\s*[:\/]|in\s+pairs|alternating/i.test(text);
+      })(w),
       description: w.description || ''
     };
   }).filter(w => w.name && typeof w.name === 'string' && w.name.trim().length > 0);
