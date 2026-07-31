@@ -1010,7 +1010,7 @@ async function getWodsFromSheet() {
       duration: parseInt(w.duration) || 0,
       weightMin: parseInt(w.weightMin) || 0,
       weightMax: parseInt(w.weightMax) || 0,
-      partner: w.partner === '1',
+      partner: w.partner === '1' || w.partner === true || w.partner === 'true',
       description: w.description || ''
     };
   }).filter(w => w.name && typeof w.name === 'string' && w.name.trim().length > 0);
