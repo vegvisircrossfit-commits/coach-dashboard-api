@@ -2353,8 +2353,25 @@
       ],
       "source": "text",
       "addedAt": "2026-07-16T00:00:00.000Z"
+    },
+    "sop_monthly_coaches_schedule_001": {
+      "title": "How to Make the Monthly Coaches Schedule",
+      "category": "Coaching",
+      "summary": "How to build the monthly coaching schedule by checking the Vegvisir Google Calendar for requested time off, filling coverage via Slack, and notifying GM or Kidd if needed. Must be done by the 15th of the prior month.",
+      "steps": [
+        "Open the Vegvisir CrossFit calendar in Google Calendar.",
+        "Look for any dates where a coach has requested time off.",
+        "Go to #coach-substitutions in Slack. Post the dates and classes that will be uncovered and ask which coaches would like to cover those slots.",
+        "If coaches do not respond in Slack, reach out individually via text to the coaches most likely to be available to cover.",
+        "If no coach can cover a shift, the GM or Kidd will cover it.",
+        "Let the GM or Kidd know immediately if they are covering any shifts so they can plan accordingly.",
+        "Note: if a coach did NOT request time off in advance and needs a shift covered, it is their responsibility to find their own coverage \u2014 not the scheduler's.",
+        "This task must be completed by the 15th of the month prior to the month being scheduled."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-17T00:00:00.000Z"
     }
   },
-  "lastUpdated": "2026-07-16T00:00:00.000Z",
+  "lastUpdated": "2026-07-17T00:00:00.000Z",
   "version": 3
 }
