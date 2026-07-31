@@ -283,7 +283,7 @@
         var mm=selectedMovements.length===0||selectedMovements.every(function(m){return w.movements.includes(m);});
         var dm=selectedBuckets.length===0||selectedBuckets.some(function(bk){var b=BUCKETS.find(function(b){return b.key===bk;});return b&&b.test(w.duration);});
         var wm=w.weightMax===0?weightRange[0]===0:w.weightMax>=weightRange[0]&&w.weightMin<=weightRange[1];
-        var pm=!partnerOnly||w.partner===true;
+        var pm=!partnerOnly||(w.partner===true||w.partner==='1'||w.partner==='true');
         return nm&&mm&&dm&&wm&&pm;
       });
     },[workouts,nameQuery,selectedMovements,selectedBuckets,weightRange,partnerOnly]);
