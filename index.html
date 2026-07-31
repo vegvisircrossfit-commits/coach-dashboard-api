@@ -160,7 +160,7 @@
     var weightMax=loads.length?Math.max.apply(null,loads):0;
     var movements=extractMovements(body);
     if (!movements.length) return null;
-    var PARTNER_RE=/you\s+go\s*[\/\\]\s*i\s+(rest|hold|go)|partner\s+(1\s*:|2\s*:)/i;
+    var PARTNER_RE=/you\s+go\s*[\/\\]\s*i\s+(rest|hold|go)|partner\s+(1\s*:|2\s*:|workout|wod)|with\s+a\s+partner|teams?\s+of\s+2|p1\s*[:\/]|p2\s*[:\/]|athlete\s+(1|2)\s*[:\/]|in\s+pairs|split|alternating/i;
     var partner=PARTNER_RE.test(text);
     return {id:uid(),name,type,duration,weightMin,weightMax,movements,description:body.replace(/\s+/g,' ').trim().slice(0,300),date:dateStr||'',partner};
   }
