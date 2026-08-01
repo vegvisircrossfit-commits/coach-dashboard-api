@@ -37,7 +37,9 @@
   (function () {
     function showCrashOverlay(err) {
       try {
-        var msg = (err && (err.stack || err.message)) || String(err);
+        var name = (err && err.name) || 'Error';
+        var text = (err && err.message) ? err.message : (typeof err === 'string' ? err : JSON.stringify(err));
+        var stack = (err && err.stack) || '';
         var el = document.getElementById('crash-overlay');
         if (!el) {
           el = document.createElement('div');
@@ -47,7 +49,8 @@
         }
         el.innerHTML =
           '<div style="color:#ef4444;font-weight:900;font-size:16px;margin-bottom:10px;font-family:Glacial Indifference,Montserrat,sans-serif;">⚠ App error caught</div>' +
-          '<div style="background:#1C2A38;border:1px solid #2A3A49;border-radius:6px;padding:12px;line-height:1.6;white-space:pre-wrap;">' + String(msg || '').replace(/</g, '&lt;') + '</div>' +
+          '<div style="background:#1C2A38;border:1px solid #2A3A49;border-radius:6px;padding:12px;line-height:1.6;white-space:pre-wrap;margin-bottom:10px;font-weight:700;">' + name + ': ' + String(text || '').replace(/</g, '&lt;') + '</div>' +
+          (stack ? '<div style="color:#8A9AA8;font-size:10px;line-height:1.6;white-space:pre-wrap;">' + String(stack).replace(/</g, '&lt;') + '</div>' : '') +
           '<button onclick="window.location.reload()" style="margin-top:16px;background:#3E6E8E;color:#fff;padding:9px 18px;font-weight:800;border:none;border-radius:4px;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;">Reload</button>';
       } catch (e2) { /* last resort: do nothing rather than crash the crash handler */ }
     }
@@ -1469,10 +1472,14 @@ overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textT
   };
   ErrorBoundary.prototype.render = function() {
     if (this.state.error) {
-      var msg = (this.state.error && (this.state.error.stack || this.state.error.message)) || String(this.state.error);
+      var e = this.state.error;
+      var name = (e && e.name) || 'Error';
+      var text = (e && e.message) ? e.message : String(e);
+      var stack = (e && e.stack) || '';
       return h('div', { style: { padding: 24, color: C.text, height: '100vh', overflowY: 'auto' } },
         h('div', { style: { fontSize: 18, fontWeight: 900, marginBottom: 10, color: '#ef4444' } }, '⚠ Something crashed'),
-        h('div', { style: { fontSize: 12, color: C.textDim, marginBottom: 16, whiteSpace: 'pre-wrap', lineHeight: 1.6, fontFamily: 'monospace', background: C.navy2, border: '1px solid ' + C.line, borderRadius: 6, padding: 12 } }, msg),
+        h('div', { style: { fontSize: 12, color: C.text, marginBottom: 10, whiteSpace: 'pre-wrap', lineHeight: 1.6, fontFamily: 'monospace', fontWeight: 700, background: C.navy2, border: '1px solid ' + C.line, borderRadius: 6, padding: 12 } }, name + ': ' + text),
+        stack && h('div', { style: { fontSize: 10, color: C.textFaint, marginBottom: 16, whiteSpace: 'pre-wrap', lineHeight: 1.6, fontFamily: 'monospace' } }, stack),
         h('button', { className: 'btn', onClick: function () { window.location.reload(); }, style: { background: C.accent, color: '#fff', padding: '9px 18px', fontWeight: 800, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase', borderRadius: 4 } }, 'Reload')
       );
     }
