@@ -1241,7 +1241,12 @@ overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textT
     useEffect(function(){
       loadAthletes();
       fetch(PROXY+'/ku/wods-today').then(function(r){return r.json();}).then(function(d){
-        var wods = d.workouts||[];
+        var wods = (d.workouts||[]).map(function(w){
+          return Object.assign({}, w, {
+            name: typeof w.name === 'string' ? w.name : "Today's WOD",
+            description: typeof w.description === 'string' ? w.description : ''
+          });
+        });
         setTodaysWods(wods);
         if(wods.length===1) setSelectedWodId(String(wods[0].id));
       }).catch(function(){});
