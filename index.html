@@ -1225,7 +1225,13 @@ overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textT
     var rpeV = useState(5); var rpe = rpeV[0]; var setRpe = rpeV[1];
     var testType = useState('Baseline'); var benchTestType = testType[0]; var setBenchTestType = testType[1];
     var b1 = useState(''); var b1Time = b1[0]; var setB1Time = b1[1];
+    var b1d = useState(''); var b1Damper = b1d[0]; var setB1Damper = b1d[1];
+    var b1r = useState(''); var b1Rpe = b1r[0]; var setB1Rpe = b1r[1];
+    var b1s = useState(false); var b1Seated = b1s[0]; var setB1Seated = b1s[1];
     var b2 = useState(''); var b2Score = b2[0]; var setB2Score = b2[1];
+    var b2w = useState(''); var b2Weights = b2w[0]; var setB2Weights = b2w[1];
+    var b2r = useState(''); var b2Rpe = b2r[0]; var setB2Rpe = b2r[1];
+    var b2s = useState(false); var b2Seated = b2s[0]; var setB2Seated = b2s[1];
     var status = useState(null); var submitStatus = status[0]; var setSubmitStatus = status[1];
     var mgOpen = useState(false); var manageOpen = mgOpen[0]; var setManageOpen = mgOpen[1];
     var newName = useState(''); var newAthleteName = newName[0]; var setNewAthleteName = newName[1];
@@ -1255,7 +1261,9 @@ overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textT
     var activeAthletes = athletes.filter(function(a){return a.active;});
 
     var resetEntryFields = function(){
-      setCustomWod(''); setAdaptations(''); setRpe(5); setB1Time(''); setB2Score('');
+      setCustomWod(''); setAdaptations(''); setRpe(5);
+      setB1Time(''); setB1Damper(''); setB1Rpe(''); setB1Seated(false);
+      setB2Score(''); setB2Weights(''); setB2Rpe(''); setB2Seated(false);
     };
 
     var submitEntry = function(){
@@ -1265,7 +1273,11 @@ overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textT
         if(!b1Time && !b2Score){ setSubmitStatus({type:'error',msg:'Enter a B1 or B2 result'}); return; }
         setSubmitStatus({type:'info',msg:'Saving…'});
         fetch(PROXY+'/ku/benchmark',{method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({athlete:selectedAthlete, test_type:benchTestType, b1_time:b1Time, b2_score:b2Score})})
+          body:JSON.stringify({
+            athlete:selectedAthlete, test_type:benchTestType,
+            b1_time:b1Time, b1_damper:b1Damper, b1_rpe:b1Rpe, b1_seated:b1Seated,
+            b2_score:b2Score, b2_weights:b2Weights, b2_rpe:b2Rpe, b2_seated:b2Seated
+          })})
           .then(function(r){return r.json();})
           .then(function(d){
             if(d.ok){ setSubmitStatus({type:'success',msg:'✓ '+benchTestType+' benchmark logged for '+selectedAthlete}); resetEntryFields(); }
@@ -1402,20 +1414,64 @@ overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textT
 
         entryMode==='benchmark' && h('div',{style:{marginBottom:20}},
           h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:6}},'Test Type'),
-          h('div',{style:{display:'flex',gap:6,marginBottom:14}},
+          h('div',{style:{display:'flex',gap:6,marginBottom:18}},
             ['Baseline','Post'].map(function(t){
               var active = benchTestType===t;
               return h('button',{key:t,className:'btn',onClick:function(){setBenchTestType(t);},style:{padding:'7px 16px',borderRadius:4,background:active?C.purple:C.navy2,border:'1px solid '+(active?C.purple:C.line),color:active?'#fff':C.text,fontWeight:700,fontSize:12,textTransform:'uppercase'}},t);
             })
           ),
-          h('div',{style:{display:'flex',gap:12,flexWrap:'wrap'}},
-            h('div',null,
-              h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'B1 Time'),
-              h('input',{value:b1Time,onChange:function(e){setB1Time(e.target.value);},placeholder:'e.g. 4:32',style:{width:140}})
+
+          h('div',{style:{background:C.navy2,border:'1px solid '+C.line,borderRadius:6,padding:14,marginBottom:14}},
+            h('div',{style:{fontSize:10,fontWeight:800,letterSpacing:'0.12em',textTransform:'uppercase',color:C.purple,marginBottom:10}},'B1'),
+            h('div',{style:{display:'flex',gap:12,flexWrap:'wrap',marginBottom:12}},
+              h('div',null,
+                h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'Time'),
+                h('input',{value:b1Time,onChange:function(e){setB1Time(e.target.value);},placeholder:'e.g. 4:32',style:{width:120}})
+              ),
+              h('div',null,
+                h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'Damper Setting'),
+                h('input',{value:b1Damper,onChange:function(e){setB1Damper(e.target.value);},placeholder:'e.g. 5',style:{width:110}})
+              ),
+              h('div',null,
+                h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'RPE (1–10)'),
+                h('input',{type:'number',min:1,max:10,value:b1Rpe,onChange:function(e){setB1Rpe(e.target.value);},placeholder:'e.g. 8',style:{width:90}})
+              )
             ),
             h('div',null,
-              h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'B2 Rounds + Reps'),
-              h('input',{value:b2Score,onChange:function(e){setB2Score(e.target.value);},placeholder:'e.g. 6 rounds + 12',style:{width:160}})
+              h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'Position'),
+              h('div',{style:{display:'flex',gap:6}},
+                [{v:false,label:'Standing'},{v:true,label:'Seated'}].map(function(o){
+                  var active = b1Seated===o.v;
+                  return h('button',{key:o.label,className:'btn',onClick:function(){setB1Seated(o.v);},style:{padding:'6px 14px',borderRadius:4,background:active?C.purple:C.navy3,border:'1px solid '+(active?C.purple:C.line),color:active?'#fff':C.text,fontWeight:700,fontSize:11,textTransform:'uppercase'}},o.label);
+                })
+              )
+            )
+          ),
+
+          h('div',{style:{background:C.navy2,border:'1px solid '+C.line,borderRadius:6,padding:14,marginBottom:14}},
+            h('div',{style:{fontSize:10,fontWeight:800,letterSpacing:'0.12em',textTransform:'uppercase',color:C.purple,marginBottom:10}},'B2'),
+            h('div',{style:{display:'flex',gap:12,flexWrap:'wrap',marginBottom:12}},
+              h('div',null,
+                h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'Rounds + Reps'),
+                h('input',{value:b2Score,onChange:function(e){setB2Score(e.target.value);},placeholder:'e.g. 6 rounds + 12',style:{width:160}})
+              ),
+              h('div',null,
+                h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'Weights Used'),
+                h('input',{value:b2Weights,onChange:function(e){setB2Weights(e.target.value);},placeholder:'e.g. 35lb DB, 20lb plate',style:{width:180}})
+              ),
+              h('div',null,
+                h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'RPE (1–10)'),
+                h('input',{type:'number',min:1,max:10,value:b2Rpe,onChange:function(e){setB2Rpe(e.target.value);},placeholder:'e.g. 7',style:{width:90}})
+              )
+            ),
+            h('div',null,
+              h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'Position'),
+              h('div',{style:{display:'flex',gap:6}},
+                [{v:false,label:'Standing'},{v:true,label:'Seated'}].map(function(o){
+                  var active = b2Seated===o.v;
+                  return h('button',{key:o.label,className:'btn',onClick:function(){setB2Seated(o.v);},style:{padding:'6px 14px',borderRadius:4,background:active?C.purple:C.navy3,border:'1px solid '+(active?C.purple:C.line),color:active?'#fff':C.text,fontWeight:700,fontSize:11,textTransform:'uppercase'}},o.label);
+                })
+              )
             )
           )
         ),
