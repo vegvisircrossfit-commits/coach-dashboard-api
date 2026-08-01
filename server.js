@@ -1441,7 +1441,7 @@ app.get("/ku/wods-today", async (req, res) => {
       date: today,
       workouts: [{
         id: "wodify-" + today,
-        name: wod.WodHeader || wod.Title || "Today's WOD",
+        name: (wod.WodHeader && wod.WodHeader.Name) || wod.Title || "Today's WOD",
         description: stripWodifyHtml(wod.FormattedWOD)
       }]
     });
