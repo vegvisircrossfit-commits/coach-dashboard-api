@@ -409,7 +409,7 @@ async function addAthlete(fields) {
 // Expected sheet tabs & headers (row 1 = header, data starts row 2):
 //   KU_Athletes   | name | onramp_date | active | intervention_end | added_at |
 //   KU_RPE_Log    | date | athlete | source | workout_text | adaptations | rpe | coach | logged_at |
-//   KU_Benchmarks | athlete | test_type | date | b1_time | b2_score | logged_at |
+//   KU_Benchmarks | athlete | test_type | date | b1_time | b1_damper | b1_rpe | b1_seated | b2_score | b2_weights | b2_rpe | b2_seated | logged_at |
 
 async function kuSheetAppend(tab, values) {
   const token = await getGoogleToken();
@@ -467,18 +467,26 @@ async function getKURPELog() {
   })).filter(r => r.athlete);
 }
 
+// KU_Benchmarks tab columns:
+//   athlete | test_type | date | b1_time | b1_damper | b1_rpe | b1_seated | b2_score | b2_weights | b2_rpe | b2_seated | logged_at
+
 async function addKUBenchmark(entry) {
   const now = new Date().toLocaleString("en-US", { timeZone: "America/Chicago" });
   await kuSheetAppend("KU_Benchmarks", [
-    entry.athlete, entry.test_type, entry.date, entry.b1_time || "", entry.b2_score || "", now
+    entry.athlete, entry.test_type, entry.date,
+    entry.b1_time || "", entry.b1_damper || "", entry.b1_rpe || "", entry.b1_seated ? "TRUE" : "FALSE",
+    entry.b2_score || "", entry.b2_weights || "", entry.b2_rpe || "", entry.b2_seated ? "TRUE" : "FALSE",
+    now
   ]);
 }
 
 async function getKUBenchmarks() {
-  const result = await sheetsGet("KU_Benchmarks!A2:F");
+  const result = await sheetsGet("KU_Benchmarks!A2:L");
   return (result.values || []).map(row => ({
     athlete: row[0] || "", test_type: row[1] || "", date: row[2] || "",
-    b1_time: row[3] || "", b2_score: row[4] || "", logged_at: row[5] || ""
+    b1_time: row[3] || "", b1_damper: row[4] || "", b1_rpe: row[5] || "", b1_seated: row[6] === "TRUE",
+    b2_score: row[7] || "", b2_weights: row[8] || "", b2_rpe: row[9] || "", b2_seated: row[10] === "TRUE",
+    logged_at: row[11] || ""
   })).filter(r => r.athlete);
 }
 
@@ -1466,11 +1474,11 @@ app.get("/ku/rpe", async (req, res) => {
 
 app.post("/ku/benchmark", async (req, res) => {
   try {
-    const { athlete, test_type, date, b1_time, b2_score } = req.body;
+    const { athlete, test_type, date, b1_time, b1_damper, b1_rpe, b1_seated, b2_score, b2_weights, b2_rpe, b2_seated } = req.body;
     if (!athlete || !test_type) return res.status(400).json({ error: "Missing athlete or test_type" });
     await addKUBenchmark({
       athlete, test_type, date: date || new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }),
-      b1_time, b2_score
+      b1_time, b1_damper, b1_rpe, b1_seated, b2_score, b2_weights, b2_rpe, b2_seated
     });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1522,8 +1530,8 @@ async function sendKUWeeklyEmail(testOnly) {
         html += `</ul>`;
       }
       html += `<p>Total logged sessions to date: ${athleteRpe.length}</p>`;
-      if (baseline) html += `<p>Baseline work capacity (${baseline.date}): B1 ${baseline.b1_time || "—"}; B2 ${baseline.b2_score || "—"}</p>`;
-      if (post) html += `<p>Post work capacity (${post.date}): B1 ${post.b1_time || "—"}; B2 ${post.b2_score || "—"}</p>`;
+      if (baseline) html += `<p>Baseline work capacity (${baseline.date}): B1 ${baseline.b1_time || "—"}${baseline.b1_damper ? " (damper " + baseline.b1_damper + ")" : ""}${baseline.b1_rpe ? ", RPE " + baseline.b1_rpe : ""}${baseline.b1_seated ? " [seated]" : ""}; B2 ${baseline.b2_score || "—"}${baseline.b2_weights ? " @ " + baseline.b2_weights : ""}${baseline.b2_rpe ? ", RPE " + baseline.b2_rpe : ""}${baseline.b2_seated ? " [seated]" : ""}</p>`;
+      if (post) html += `<p>Post work capacity (${post.date}): B1 ${post.b1_time || "—"}${post.b1_damper ? " (damper " + post.b1_damper + ")" : ""}${post.b1_rpe ? ", RPE " + post.b1_rpe : ""}${post.b1_seated ? " [seated]" : ""}; B2 ${post.b2_score || "—"}${post.b2_weights ? " @ " + post.b2_weights : ""}${post.b2_rpe ? ", RPE " + post.b2_rpe : ""}${post.b2_seated ? " [seated]" : ""}</p>`;
       html += `<hr/>`;
     }
 
