@@ -30,6 +30,31 @@
 </style>
 </head>
 <body>
+<script>
+  // Global catch-all — catches errors outside React's render cycle (event handlers,
+  // fetch callbacks, promise rejections, or a full script failure) that the in-app
+  // React error boundary can't see. Renders directly via DOM, independent of React.
+  (function () {
+    function showCrashOverlay(err) {
+      try {
+        var msg = (err && (err.stack || err.message)) || String(err);
+        var el = document.getElementById('crash-overlay');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'crash-overlay';
+          el.style.cssText = 'position:fixed;inset:0;background:#0F171F;color:#EAEFF3;padding:24px;z-index:99999;overflow:auto;font-family:monospace;font-size:12px;';
+          document.body.appendChild(el);
+        }
+        el.innerHTML =
+          '<div style="color:#ef4444;font-weight:900;font-size:16px;margin-bottom:10px;font-family:Glacial Indifference,Montserrat,sans-serif;">⚠ App error caught</div>' +
+          '<div style="background:#1C2A38;border:1px solid #2A3A49;border-radius:6px;padding:12px;line-height:1.6;white-space:pre-wrap;">' + String(msg || '').replace(/</g, '&lt;') + '</div>' +
+          '<button onclick="window.location.reload()" style="margin-top:16px;background:#3E6E8E;color:#fff;padding:9px 18px;font-weight:800;border:none;border-radius:4px;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;">Reload</button>';
+      } catch (e2) { /* last resort: do nothing rather than crash the crash handler */ }
+    }
+    window.addEventListener('error', function (e) { showCrashOverlay(e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { showCrashOverlay(e.reason); });
+  })();
+</script>
 <div id="root"></div>
 <script>
 (function() {
@@ -1427,7 +1452,34 @@ overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textT
     );
   }
 
-  ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+  // ══════════════════════════════════════════════════════
+  // ERROR BOUNDARY — catches render crashes so the screen
+  // shows a message instead of going blank navy
+  // ══════════════════════════════════════════════════════
+
+  function ErrorBoundary(props) {
+    React.Component.call(this, props);
+    this.state = { error: null };
+  }
+  ErrorBoundary.prototype = Object.create(React.Component.prototype);
+  ErrorBoundary.prototype.constructor = ErrorBoundary;
+  ErrorBoundary.getDerivedStateFromError = function(error) { return { error: error }; };
+  ErrorBoundary.prototype.componentDidCatch = function(error, info) {
+    console.error('[App Crash]', error, info && info.componentStack);
+  };
+  ErrorBoundary.prototype.render = function() {
+    if (this.state.error) {
+      var msg = (this.state.error && (this.state.error.stack || this.state.error.message)) || String(this.state.error);
+      return h('div', { style: { padding: 24, color: C.text, height: '100vh', overflowY: 'auto' } },
+        h('div', { style: { fontSize: 18, fontWeight: 900, marginBottom: 10, color: '#ef4444' } }, '⚠ Something crashed'),
+        h('div', { style: { fontSize: 12, color: C.textDim, marginBottom: 16, whiteSpace: 'pre-wrap', lineHeight: 1.6, fontFamily: 'monospace', background: C.navy2, border: '1px solid ' + C.line, borderRadius: 6, padding: 12 } }, msg),
+        h('button', { className: 'btn', onClick: function () { window.location.reload(); }, style: { background: C.accent, color: '#fff', padding: '9px 18px', fontWeight: 800, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase', borderRadius: 4 } }, 'Reload')
+      );
+    }
+    return this.props.children;
+  };
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
 })();
 </script>
 </body>
