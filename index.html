@@ -60,6 +60,8 @@
     textDim: '#8A9AA8', textFaint: '#566673', gold: '#C9A84C', green: '#4F9D8C', purple: '#6B5B95'
   };
 
+  var PROXY='https://coach-dashboard-api.onrender.com';
+
   // ══════════════════════════════════════════════════════
   // WOD SEARCH
   // ══════════════════════════════════════════════════════
@@ -231,14 +233,14 @@
             setImportStatus({type:'info',msg:'Uploading '+workouts.length+' workouts to Sheet…'});
           }
           if(!workouts.length){setImportStatus({type:'error',msg:'No workouts found in file'});return;}
-          fetch('https://coach-dashboard-api.onrender.com/admin/upload-wods',{
+          fetch(PROXY+'/admin/upload-wods',{
             method:'POST',headers:{'Content-Type':'application/json'},
             body:JSON.stringify({workouts:workouts})
           }).then(function(r){return r.json();})
           .then(function(d){
             if(d.ok){
               setImportStatus({type:'success',msg:'✓ Saved '+d.count+' workouts to Google Sheet'});
-              fetch('https://coach-dashboard-api.onrender.com/wods').then(function(r){return r.json();}).then(function(d2){if(d2.workouts)setWorkouts(d2.workouts);});
+              fetch(PROXY+'/wods').then(function(r){return r.json();}).then(function(d2){if(d2.workouts)setWorkouts(d2.workouts);});
             } else {
               setImportStatus({type:'error',msg:'Upload failed: '+(d.error||'unknown error')});
             }
@@ -250,7 +252,7 @@
     };
 
     useEffect(function(){
-      fetch('https://coach-dashboard-api.onrender.com/wods')
+      fetch(PROXY+'/wods')
         .then(function(r){
           if(!r.ok) throw new Error('Server error '+r.status);
           return r.json();
@@ -462,7 +464,7 @@
   function callClaude(messages,systemPrompt){
     var body={model:'claude-sonnet-4-6',max_tokens:1000,messages:messages};
     if(systemPrompt) body.system=systemPrompt;
-    return fetch('https://coach-dashboard-api.onrender.com/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    return fetch(PROXY+'/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e&&e.error&&e.error.message||'HTTP '+r.status);});return r.json();})
       .then(function(data){return data.content.map(function(b){return b.text||'';}).join('').trim();});
   }
@@ -555,7 +557,7 @@
     var audioRef=useRef(); var saveTimer=useRef();
 
     useEffect(function(){
-      fetch('https://coach-dashboard-api.onrender.com/playbook')
+      fetch(PROXY+'/playbook')
         .then(function(r){return r.json();})
         .then(function(data){
           // Normalize SOPs — handle both old flowchart format and new flat steps format
@@ -596,7 +598,7 @@
     var addSop=useCallback(function(key,data){
       setSops(function(prev){var next=Object.assign({},prev);next[key]=data;return next;});
       setSaveStatus('saving');
-      fetch('https://coach-dashboard-api.onrender.com/playbook/sop',{
+      fetch(PROXY+'/playbook/sop',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({pin:playbookPin,key:key,sop:data})
       }).then(function(r){return r.json();})
@@ -606,7 +608,7 @@
     var deleteSop=useCallback(function(key){
       setSops(function(prev){var next=Object.assign({},prev);delete next[key];return next;});
       if(selectedSop===key)setSelectedSop(null);
-      fetch('https://coach-dashboard-api.onrender.com/playbook/sop/'+key,{
+      fetch(PROXY+'/playbook/sop/'+key,{
         method:'DELETE',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({pin:playbookPin})
       }).then(function(r){return r.json();})
@@ -804,7 +806,7 @@
 
     var deleteAthlete = function(pin) {
       setDeleteStatus('deleting');
-      fetch('https://coach-dashboard-api.onrender.com/athletes/'+athlete.row_number, {
+      fetch(PROXY+'/athletes/'+athlete.row_number, {
         method: 'DELETE',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({pin: pin})
@@ -820,7 +822,7 @@
 
     var saveNote = function() {
       setSaving('saving');
-      fetch('https://coach-dashboard-api.onrender.com/athletes/'+athlete.row_number, {
+      fetch(PROXY+'/athletes/'+athlete.row_number, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ coach_notes: noteContent })
@@ -832,7 +834,7 @@
         if(onSaveNote) onSaveNote(athlete.row_number, noteContent);
         // Refresh this athlete's data from server after 1s
         setTimeout(function(){
-          fetch('https://coach-dashboard-api.onrender.com/athletes/search?name='+encodeURIComponent(athlete.athlete))
+          fetch(PROXY+'/athletes/search?name='+encodeURIComponent(athlete.athlete))
             .then(function(r){return r.json();})
             .then(function(d){ if(d.athlete && onSaveNote) onSaveNote(athlete.row_number, d.coach_notes||noteContent); })
             .catch(function(){});
@@ -846,12 +848,12 @@
       // Also clear the checkin_scheduled tag from coach_notes on the server
       var cleanedNotes = coachNotesText.replace(/\[checkin_scheduled:[^\]]+\]/g, '').trim();
       if (cleanedNotes !== coachNotesText) {
-        fetch('https://coach-dashboard-api.onrender.com/athletes/'+athlete.row_number, {
+        fetch(PROXY+'/athletes/'+athlete.row_number, {
           method: 'PATCH', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({coach_notes: cleanedNotes})
         }).catch(function(){});
       }
-      fetch('https://coach-dashboard-api.onrender.com/athletes/'+athlete.row_number+'/checkin', {
+      fetch(PROXY+'/athletes/'+athlete.row_number+'/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wodify_id: athlete.wodify_id })
@@ -994,8 +996,6 @@
   // ══════════════════════════════════════════════════════
   // DASHBOARD — Athlete Search & Browse
   // ══════════════════════════════════════════════════════
-
-  var PROXY='https://coach-dashboard-api.onrender.com';
 
   function Dashboard(){
     var al=useState(null); var allAthletes=al[0]; var setAllAthletes=al[1];
@@ -1183,10 +1183,221 @@ overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textT
   }
 
   // ══════════════════════════════════════════════════════
+  // KU STUDY — Adaptive Fitness research tracking
+  // ══════════════════════════════════════════════════════
+
+  function KUStudy(){
+    var ath = useState([]); var athletes = ath[0]; var setAthletes = ath[1];
+    var sel = useState(''); var selectedAthlete = sel[0]; var setSelectedAthlete = sel[1];
+    var mode = useState('today'); var entryMode = mode[0]; var setEntryMode = mode[1]; // 'today' | 'custom' | 'benchmark'
+    var todayWods = useState([]); var todaysWods = todayWods[0]; var setTodaysWods = todayWods[1];
+    var selWod = useState(''); var selectedWodId = selWod[0]; var setSelectedWodId = selWod[1];
+    var customText = useState(''); var customWod = customText[0]; var setCustomWod = customText[1];
+    var adapt = useState(''); var adaptations = adapt[0]; var setAdaptations = adapt[1];
+    var rpeV = useState(5); var rpe = rpeV[0]; var setRpe = rpeV[1];
+    var testType = useState('Baseline'); var benchTestType = testType[0]; var setBenchTestType = testType[1];
+    var b1 = useState(''); var b1Time = b1[0]; var setB1Time = b1[1];
+    var b2 = useState(''); var b2Score = b2[0]; var setB2Score = b2[1];
+    var status = useState(null); var submitStatus = status[0]; var setSubmitStatus = status[1];
+    var mgOpen = useState(false); var manageOpen = mgOpen[0]; var setManageOpen = mgOpen[1];
+    var newName = useState(''); var newAthleteName = newName[0]; var setNewAthleteName = newName[1];
+    var newOnramp = useState(''); var newOnrampDate = newOnramp[0]; var setNewOnrampDate = newOnramp[1];
+    var addStatus = useState(null); var addAthleteStatus = addStatus[0]; var setAddAthleteStatus = addStatus[1];
+
+    var loadAthletes = useCallback(function(){
+      fetch(PROXY+'/ku/athletes').then(function(r){return r.json();}).then(function(d){
+        setAthletes(d.athletes||[]);
+      }).catch(function(){});
+    },[]);
+
+    useEffect(function(){
+      loadAthletes();
+      fetch(PROXY+'/ku/wods-today').then(function(r){return r.json();}).then(function(d){
+        var wods = d.workouts||[];
+        setTodaysWods(wods);
+        if(wods.length===1) setSelectedWodId(String(wods[0].id));
+      }).catch(function(){});
+    },[loadAthletes]);
+
+    var activeAthletes = athletes.filter(function(a){return a.active;});
+
+    var resetEntryFields = function(){
+      setCustomWod(''); setAdaptations(''); setRpe(5); setB1Time(''); setB2Score('');
+    };
+
+    var submitEntry = function(){
+      if(!selectedAthlete){ setSubmitStatus({type:'error',msg:'Select an athlete first'}); return; }
+
+      if(entryMode==='benchmark'){
+        if(!b1Time && !b2Score){ setSubmitStatus({type:'error',msg:'Enter a B1 or B2 result'}); return; }
+        setSubmitStatus({type:'info',msg:'Saving…'});
+        fetch(PROXY+'/ku/benchmark',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({athlete:selectedAthlete, test_type:benchTestType, b1_time:b1Time, b2_score:b2Score})})
+          .then(function(r){return r.json();})
+          .then(function(d){
+            if(d.ok){ setSubmitStatus({type:'success',msg:'✓ '+benchTestType+' benchmark logged for '+selectedAthlete}); resetEntryFields(); }
+            else setSubmitStatus({type:'error',msg:d.error||'Failed'});
+          }).catch(function(err){ setSubmitStatus({type:'error',msg:err.message}); });
+        return;
+      }
+
+      var selectedWod = todaysWods.find(function(w){return String(w.id)===selectedWodId;});
+      var workoutText = entryMode==='today' ? ((selectedWod||{}).description || (selectedWod||{}).name || '') : customWod;
+      if(entryMode==='today' && !selectedWodId){ setSubmitStatus({type:'error',msg:"Select today's WOD"}); return; }
+      if(entryMode==='custom' && !customWod){ setSubmitStatus({type:'error',msg:'Enter the workout performed'}); return; }
+      if(!rpe){ setSubmitStatus({type:'error',msg:'Select an RPE'}); return; }
+
+      setSubmitStatus({type:'info',msg:'Saving…'});
+      fetch(PROXY+'/ku/rpe',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({athlete:selectedAthlete, source: entryMode==='today'?"Today's WOD":'Custom', workout_text:workoutText, adaptations:adaptations, rpe:rpe})})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(d.ok){ setSubmitStatus({type:'success',msg:'✓ Logged for '+selectedAthlete}); resetEntryFields(); }
+          else setSubmitStatus({type:'error',msg:d.error||'Failed'});
+        }).catch(function(err){ setSubmitStatus({type:'error',msg:err.message}); });
+    };
+
+    var addAthleteSubmit = function(){
+      if(!newAthleteName.trim()) return;
+      setAddAthleteStatus({type:'info',msg:'Adding…'});
+      fetch(PROXY+'/ku/athletes',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:newAthleteName.trim(), onramp_date:newOnrampDate})})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(d.ok){ setAddAthleteStatus({type:'success',msg:'✓ Added '+newAthleteName}); setNewAthleteName(''); setNewOnrampDate(''); loadAthletes(); }
+          else setAddAthleteStatus({type:'error',msg:d.error||'Failed'});
+        }).catch(function(err){ setAddAthleteStatus({type:'error',msg:err.message}); });
+    };
+
+    var toggleActive = function(rowNumber, active){
+      fetch(PROXY+'/ku/athletes/'+rowNumber+'/active',{method:'PATCH',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({active:active})})
+        .then(function(r){return r.json();})
+        .then(function(){ loadAthletes(); if(!active) setSelectedAthlete(''); })
+        .catch(function(){});
+    };
+
+    var MODES = [{key:'today',label:"Today's WOD"},{key:'custom',label:'Custom WOD'},{key:'benchmark',label:'Benchmark Test'}];
+
+    var selectedWodDetail = todaysWods.find(function(w){return String(w.id)===selectedWodId;});
+
+    return h('div',{style:{display:'flex',flexDirection:'column',height:'100%'}},
+      h('div',{style:{padding:'16px 20px 0',borderBottom:'1px solid '+C.line,flexShrink:0}},
+        h('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:12,flexWrap:'wrap',gap:8}},
+          h('div',null,
+            h('div',{style:{fontSize:10,letterSpacing:'0.25em',color:C.purple,fontWeight:700,marginBottom:3}},'KU RESEARCH STUDY'),
+            h('h2',{style:{fontSize:26,fontWeight:900,lineHeight:1,letterSpacing:'-0.01em',textTransform:'uppercase'}},'Adaptive ',h('span',{style:{color:C.purple}},'Fitness'))
+          ),
+          h('button',{className:'btn',onClick:function(){setManageOpen(function(p){return !p;});},style:{background:manageOpen?C.purple:C.navy3,color:manageOpen?'#fff':C.text,padding:'6px 12px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3,border:'1px solid '+C.line}},manageOpen?'✕ Close':'⚙ Manage Athletes')
+        )
+      ),
+      h('div',{style:{flex:1,overflowY:'auto',padding:'16px 20px'}},
+
+        manageOpen && h('div',{className:'fade-in',style:{background:C.navy2,border:'1px solid '+C.purple,borderRadius:6,padding:16,marginBottom:16}},
+          h('div',{style:{fontSize:11,fontWeight:800,letterSpacing:'0.15em',textTransform:'uppercase',color:C.purple,marginBottom:12}},'Manage KU Study Roster'),
+          h('div',{style:{display:'flex',gap:8,marginBottom:10,flexWrap:'wrap'}},
+            h('input',{placeholder:'Athlete full name',value:newAthleteName,onChange:function(e){setNewAthleteName(e.target.value);},style:{flex:1,minWidth:160}}),
+            h('input',{type:'date',value:newOnrampDate,onChange:function(e){setNewOnrampDate(e.target.value);},style:{width:160}}),
+            h('button',{className:'btn',onClick:addAthleteSubmit,style:{background:C.purple,color:'#fff',padding:'7px 16px',fontWeight:700,fontSize:12,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3}},'+ Add')
+          ),
+          addAthleteStatus && h('div',{style:{marginBottom:10,fontSize:12,color:addAthleteStatus.type==='error'?'#ef4444':addAthleteStatus.type==='success'?C.green:C.textDim}},addAthleteStatus.msg),
+          h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:8}},'Current Roster'),
+          athletes.length===0
+            ? h('div',{style:{fontSize:12,color:C.textFaint}},'No athletes on the KU study yet.')
+            : h('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+                athletes.map(function(a){
+                  return h('div',{key:a.row_number,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px',background:C.navy,borderRadius:4,border:'1px solid '+C.line,opacity:a.active?1:0.5,flexWrap:'wrap',gap:6}},
+                    h('div',null,
+                      h('span',{style:{fontWeight:700,fontSize:13}},a.athlete),
+                      h('span',{style:{fontSize:11,color:C.textFaint,marginLeft:8}},'On-ramp: '+(a.onramp_date||'—')),
+                      a.intervention_end&&h('span',{style:{fontSize:11,color:C.textFaint,marginLeft:8}},'· 12-wk voluntary window ends: '+a.intervention_end),
+                      !a.active && h('span',{style:{fontSize:10,color:'#ef4444',marginLeft:8,fontWeight:700,textTransform:'uppercase'}},'Inactive')
+                    ),
+                    h('button',{className:'btn',onClick:function(){toggleActive(a.row_number, !a.active);},style:{background:'none',color:a.active?'#ef4444':C.green,fontSize:11,fontWeight:700,border:'1px solid '+(a.active?'rgba(239,68,68,0.4)':'rgba(79,157,140,0.4)'),padding:'4px 10px',borderRadius:3,textTransform:'uppercase'}},a.active?'Remove':'Restore')
+                  );
+                })
+              )
+        ),
+
+        h('div',{style:{marginBottom:16}},
+          h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:6}},'Athlete'),
+          h('select',{value:selectedAthlete,onChange:function(e){setSelectedAthlete(e.target.value);setSubmitStatus(null);},style:{width:'100%',maxWidth:320,height:38,fontSize:13}},
+            h('option',{value:''},activeAthletes.length?'Select athlete…':'No active KU athletes — add one above'),
+            activeAthletes.map(function(a){return h('option',{key:a.row_number,value:a.athlete},a.athlete);})
+          )
+        ),
+
+        h('div',{style:{marginBottom:16}},
+          h('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+            MODES.map(function(m){
+              var active = entryMode===m.key;
+              return h('button',{key:m.key,className:'btn',onClick:function(){setEntryMode(m.key);setSubmitStatus(null);},style:{padding:'8px 16px',borderRadius:4,background:active?C.purple:C.navy2,border:'1px solid '+(active?C.purple:C.line),color:active?'#fff':C.text,fontWeight:700,fontSize:12,letterSpacing:'0.06em',textTransform:'uppercase'}},m.label);
+            })
+          )
+        ),
+
+        entryMode==='today' && h('div',{style:{marginBottom:16}},
+          h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:6}},"Today's WOD"),
+          todaysWods.length===0
+            ? h('div',{style:{fontSize:12,color:C.textFaint,padding:'10px 0'}},"No WOD dated today found in the library — use Custom WOD instead, or check the WOD Search tab's date field.")
+            : h('select',{value:selectedWodId,onChange:function(e){setSelectedWodId(e.target.value);},style:{width:'100%',maxWidth:320,height:38,fontSize:13,marginBottom:8}},
+                h('option',{value:''},'Select workout…'),
+                todaysWods.map(function(w){return h('option',{key:w.id,value:w.id},w.name);})
+              ),
+          selectedWodDetail && h('div',{style:{fontSize:12,color:C.textDim,background:C.navy2,border:'1px solid '+C.line,borderRadius:5,padding:10,lineHeight:1.5}},selectedWodDetail.description||selectedWodDetail.name)
+        ),
+
+        entryMode==='custom' && h('div',{style:{marginBottom:16}},
+          h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:6}},'Workout Performed'),
+          h('textarea',{value:customWod,onChange:function(e){setCustomWod(e.target.value);},placeholder:'Type the workout as written/performed',style:{width:'100%',minHeight:80,resize:'vertical',fontSize:13}})
+        ),
+
+        (entryMode==='today'||entryMode==='custom') && h('div',{style:{marginBottom:16}},
+          h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:6}},'Adaptations / Scaling (optional)'),
+          h('input',{value:adaptations,onChange:function(e){setAdaptations(e.target.value);},placeholder:'e.g. scaled to 55lb, seated variation',style:{width:'100%',maxWidth:400}})
+        ),
+
+        (entryMode==='today'||entryMode==='custom') && h('div',{style:{marginBottom:20}},
+          h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:8}},'RPE (1–10)'),
+          h('div',{style:{display:'flex',gap:5,flexWrap:'wrap'}},
+            Array.from({length:10},function(_,i){return i+1;}).map(function(n){
+              var active = rpe===n;
+              return h('button',{key:n,className:'btn',onClick:function(){setRpe(n);},style:{width:36,height:36,borderRadius:'50%',background:active?C.purple:C.navy2,border:'1px solid '+(active?C.purple:C.line),color:active?'#fff':C.text,fontWeight:800,fontSize:13}},n);
+            })
+          )
+        ),
+
+        entryMode==='benchmark' && h('div',{style:{marginBottom:20}},
+          h('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:6}},'Test Type'),
+          h('div',{style:{display:'flex',gap:6,marginBottom:14}},
+            ['Baseline','Post'].map(function(t){
+              var active = benchTestType===t;
+              return h('button',{key:t,className:'btn',onClick:function(){setBenchTestType(t);},style:{padding:'7px 16px',borderRadius:4,background:active?C.purple:C.navy2,border:'1px solid '+(active?C.purple:C.line),color:active?'#fff':C.text,fontWeight:700,fontSize:12,textTransform:'uppercase'}},t);
+            })
+          ),
+          h('div',{style:{display:'flex',gap:12,flexWrap:'wrap'}},
+            h('div',null,
+              h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'B1 Time'),
+              h('input',{value:b1Time,onChange:function(e){setB1Time(e.target.value);},placeholder:'e.g. 4:32',style:{width:140}})
+            ),
+            h('div',null,
+              h('div',{style:{fontSize:9,color:C.textFaint,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.1em'}},'B2 Rounds + Reps'),
+              h('input',{value:b2Score,onChange:function(e){setB2Score(e.target.value);},placeholder:'e.g. 6 rounds + 12',style:{width:160}})
+            )
+          )
+        ),
+
+        h('button',{className:'btn',onClick:submitEntry,style:{background:C.purple,color:'#fff',padding:'9px 22px',fontWeight:800,fontSize:13,letterSpacing:'0.1em',textTransform:'uppercase',borderRadius:4}},'Save Entry'),
+        submitStatus && h('div',{className:'fade-in',style:{marginTop:12,padding:'8px 12px',borderRadius:4,fontSize:12,background:submitStatus.type==='success'?'#0a2a0a':submitStatus.type==='error'?'#2a0a0a':'rgba(107,91,149,0.1)',border:'1px solid '+(submitStatus.type==='success'?'#2a6':submitStatus.type==='error'?'#a33':C.purple),color:submitStatus.type==='success'?'#4d4':submitStatus.type==='error'?'#f88':C.textDim}},submitStatus.msg)
+      )
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
   // ROOT
   // ══════════════════════════════════════════════════════
 
-  var TABS=[{id:'dashboard',label:'Athletes',icon:'👥'},{id:'wods',label:'WOD Search',icon:'🏋️'},{id:'playbook',label:'Playbook',icon:'📋'}];
+  var TABS=[{id:'dashboard',label:'Athletes',icon:'👥'},{id:'wods',label:'WOD Search',icon:'🏋️'},{id:'playbook',label:'Playbook',icon:'📋'},{id:'ku',label:'KU Study',icon:'🎓'}];
 
   function App(){
     var ts=useState('dashboard'); var tab=ts[0]; var setTab=ts[1];
@@ -1210,7 +1421,8 @@ overdue&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textT
       h('div',{style:{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}},
         tab==='dashboard'&&h(Dashboard),
         tab==='wods'&&h(WodSearch),
-        tab==='playbook'&&h(Playbook)
+        tab==='playbook'&&h(Playbook),
+        tab==='ku'&&h(KUStudy)
       )
     );
   }
