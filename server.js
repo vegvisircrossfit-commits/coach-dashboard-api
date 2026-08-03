@@ -323,6 +323,47 @@ async function sheetsBatchUpdate(data) {
   return resp.json();
 }
 
+function parseJSON(text) {
+  try { return JSON.parse(text.replace(/```json|```/g, "").trim()); } catch { return null; }
+}
+
+async function callClaude(system, userMessage) {
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": ANTHROPIC_API_KEY },
+    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 600, system, messages: [{ role: "user", content: userMessage }] })
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data?.error?.message || `Claude error ${resp.status}`);
+  return data.content?.map(b => b.text || "").join("").trim() || "";
+}
+
+async function generateAndCacheSummary(athlete) {
+  const context = [
+    athlete.goals     && `Goals: ${athlete.goals}`,
+    athlete.rx        && `Prescription: ${athlete.rx}`,
+    athlete.injuries  && `Injuries: ${athlete.injuries}`,
+    athlete.dos       && `Dos: ${athlete.dos}`,
+    athlete.donts     && `Donts: ${athlete.donts}`,
+    athlete.upcoming  && `Upcoming: ${athlete.upcoming}`,
+    athlete.notes     && `Notes: ${athlete.notes}`,
+    athlete.coach_notes && `Coach Notes: ${athlete.coach_notes}`,
+  ].filter(Boolean).join("\n");
+  if (!context) return "";
+  const system = `You create ultra-concise coach briefs for CrossFit athletes.
+Return ONLY valid JSON, no markdown.
+Format: {"dos":["max 3 short bullets"],"donts":["max 3 short bullets"],"injuries":"one line or empty","upcoming":"one line or empty","trip_start":"YYYY-MM-DD or empty","trip_end":"YYYY-MM-DD or empty","summary":"one sentence"}
+Each bullet under 8 words. Be specific and actionable.
+For trip_start/trip_end: only fill if specific dates are mentioned. Leave empty if dates are vague.`;
+  const raw = await callClaude(system, `Athlete: ${athlete.athlete}\n\n${context}`);
+  const parsed = parseJSON(raw);
+  if (!parsed) return context.slice(0, 200);
+  const summary = JSON.stringify(parsed);
+  await sheetsBatchUpdate([{ range: `Sheet1!N${athlete.row_number}`, values: [[summary]] }]);
+  console.log(`AI summary cached for ${athlete.athlete}`);
+  return summary;
+}
+
 async function sheetsAppend(values) {
   const token = await getGoogleToken();
   const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A:N:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
