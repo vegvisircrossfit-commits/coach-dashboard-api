@@ -331,13 +331,7 @@ async function sheetsAppend(values) {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ values })
   });
-  const result = await resp.json();
-  if (!resp.ok || result.error) {
-    console.error('[Sheets] Append failed:', JSON.stringify(result));
-    throw new Error(result.error?.message || `Sheets append failed: ${resp.status}`);
-  }
-  console.log(`[Sheets] Appended ${values.length} row(s) successfully`);
-  return result;
+  return resp.json();
 }
 
 function rowToAthlete(row, rowIndex) {
@@ -618,12 +612,9 @@ function startRosterCron() {
 // SLACK
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Deduplicate Slack events — prevent double-processing on retries
+// Deduplicate Slack events
 const processedEvents = new Set();
-setInterval(() => {
-  // Clear old event IDs every 10 minutes
-  if (processedEvents.size > 1000) processedEvents.clear();
-}, 600000);
+setInterval(() => { if (processedEvents.size > 1000) processedEvents.clear(); }, 600000);
 
 // In-memory store for pending disambiguations
 // { [channelId_threadTs]: { athletes: [...], parsed: {...}, text: string, expiresAt: number } }
@@ -672,22 +663,17 @@ IMPORTANT: "upcoming" is ONLY for travel, trips, vacations, or planned absences 
   const raw = await callClaude(system, `Parse this new athlete note:\n\n${text}`);
   const parsed = parseJSON(raw);
   if (!parsed?.athlete) { console.log("Could not parse new athlete name"); return; }
-  try {
-    const existing = await findAthlete(parsed.athlete);
-    if (existing) {
-      const fields = Object.fromEntries(Object.entries(parsed).filter(([k,v]) => v && k !== "athlete"));
-      await updateAthlete(existing.row_number, fields);
-      await generateAndCacheSummary({ ...existing, ...fields });
-    } else {
-      await addAthlete(parsed);
-      console.log(`[NewAthlete] Added to Sheet: ${parsed.athlete}`);
-      const newAthlete = await findAthlete(parsed.athlete);
-      if (newAthlete) await generateAndCacheSummary({ ...newAthlete, ...parsed });
-    }
-    console.log(`Processed new athlete: ${parsed.athlete}`);
-  } catch (err) {
-    console.error(`[NewAthlete] Sheet write failed for ${parsed.athlete}:`, err.message);
+  const existing = await findAthlete(parsed.athlete);
+  if (existing) {
+    const fields = Object.fromEntries(Object.entries(parsed).filter(([k,v]) => v && k !== "athlete"));
+    await updateAthlete(existing.row_number, fields);
+    await generateAndCacheSummary({ ...existing, ...fields });
+  } else {
+    await addAthlete(parsed);
+    const newAthlete = await findAthlete(parsed.athlete);
+    if (newAthlete) await generateAndCacheSummary({ ...newAthlete, ...parsed });
   }
+  console.log(`Processed new athlete: ${parsed.athlete}`);
 }
 
 function detectCancellation(text) {
@@ -859,12 +845,8 @@ app.post("/slack/events", async (req, res) => {
   res.json({ ok: true });
   const event = body.event || {};
   if (event.type !== "message" || event.bot_id || !event.text) return;
-  // Deduplicate — skip if we've already processed this event
-  const eventId = body.event_id || (event.client_msg_id) || (event.channel + event.ts);
-  if (processedEvents.has(eventId)) {
-    console.log(`[Slack] Skipping duplicate event: ${eventId}`);
-    return;
-  }
+  const eventId = body.event_id || event.client_msg_id || (event.channel + event.ts);
+  if (processedEvents.has(eventId)) { console.log(`[Slack] Duplicate skipped`); return; }
   processedEvents.add(eventId);
   try {
     if (event.channel === NEW_ATHLETES_CHANNEL && event.text.toLowerCase().includes("new athlete")) await handleNewAthlete(event.text.trim());
@@ -1417,7 +1399,7 @@ app.get("/admin/sync-checkins", async (req, res) => {
   }
 });
 
-// Delete athlete row from Sheet (PIN protected)
+// Delete athlete row from Sheet (PIN protected) — actually deletes the row to avoid gaps
 app.delete("/athletes/:rowNumber", async (req, res) => {
   try {
     const { pin } = req.body;
@@ -1425,10 +1407,26 @@ app.delete("/athletes/:rowNumber", async (req, res) => {
     const rowNumber = parseInt(req.params.rowNumber);
     if (isNaN(rowNumber) || rowNumber < 3) return res.status(400).json({ error: "Invalid row" });
     const token = await getGoogleToken();
-    // Clear the entire row
-    const ranges = "ABCDEFGHIJKLMN".split('').map(col => `Sheet1!${col}${rowNumber}`);
-    await sheetsBatchUpdate(ranges.map(range => ({ range, values: [['']] })));
-    console.log(`[Delete] Row ${rowNumber} cleared`);
+    // Use batchUpdate to delete the entire row (shifts rows up, no gap left)
+    const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId: 0,
+              dimension: "ROWS",
+              startIndex: rowNumber - 1,  // 0-indexed
+              endIndex: rowNumber          // exclusive
+            }
+          }
+        }]
+      })
+    });
+    const result = await resp.json();
+    if (!resp.ok || result.error) throw new Error(result.error?.message || 'Delete failed');
+    console.log(`[Delete] Row ${rowNumber} deleted (shifted up)`);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
