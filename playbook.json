@@ -1603,7 +1603,8 @@
         "At the top you will see a filter for active memberships \u2014 click All, then type in the person's name.",
         "Open their account and check if they have a credit card on file.",
         "If they have a card on file: offer to add the drop-in to their account and auto-charge the card. If they prefer, they can also go through the standard drop-in procedure \u2014 send them the class link for their requested time.",
-        "Make them feel remembered and welcomed. Say something like: 'Hey [Name], great to see you again! How has everything been? We cannot wait to train with you \u2014 here is the link for the [time] class!'"
+        "Make them feel remembered and welcomed. Say something like: 'Hey [Name], great to see you again! How has everything been? We cannot wait to train with you \u2014 here is the link for the [time] class!'",
+        "NOTE \u2014 Athlete Not Showing Up in Search: If the athlete does not appear in the search results, you may be filtered to Active and On-Ramp only. Switch the filter from 'Active and On-Ramp' to 'All', then search their name again. When you open their account, reactivate it, then continue from Step 3."
       ],
       "source": "text",
       "addedAt": "2026-07-15T00:00:00.000Z"
@@ -2367,6 +2368,33 @@
         "Let the GM or Kidd know immediately if they are covering any shifts so they can plan accordingly.",
         "Note: if a coach did NOT request time off in advance and needs a shift covered, it is their responsibility to find their own coverage \u2014 not the scheduler's.",
         "This task must be completed by the 15th of the month prior to the month being scheduled."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-17T00:00:00.000Z"
+    },
+    "sop_dropin_cancellation_refund_001": {
+      "title": "Drop-In Cancellation \u2014 Refund Protocol",
+      "category": "Sales & Member Ops",
+      "summary": "If a drop-in cancels before their class, issue a refund. If the class has already happened, no refund can be issued as the spot was taken.",
+      "steps": [
+        "Check what time it is relative to the drop-in's class time.",
+        "If the cancellation is BEFORE their class: issue a refund. Follow the Refunds \u2014 Policy & Protocol SOP.",
+        "If the refund is not tied to a standard account, go directly to Invoices in Wodify. Search the person's name under paid invoices this month. Click on their invoice and refund their money as you normally would.",
+        "If the class has ALREADY HAPPENED: a refund cannot be issued. The spot was taken up by them in the class.",
+        "Let them know kindly and apologize for the inconvenience: 'I am so sorry, but since the class has already taken place we are unable to issue a refund for that session. We hope to see you next time!'"
+      ],
+      "source": "text",
+      "addedAt": "2026-07-17T00:00:00.000Z"
+    },
+    "sop_inappropriate_conversation_001": {
+      "title": "Athlete Speaking Inappropriately in Class \u2014 Protocol",
+      "category": "Coaching",
+      "summary": "If an athlete brings up politics, religion, gossips about someone not present, or speaks negatively about others, redirect the conversation immediately, then address them privately. Escalate to Kidd if it happens again.",
+      "steps": [
+        "If an athlete is talking about politics, religion, speaking negatively about someone not in the gym, or saying anything that could make others feel unsafe or uncomfortable: redirect the conversation immediately. The Question of the Day is a great pivot \u2014 it shifts the energy quickly and keeps things positive.",
+        "When you get a moment to pull them aside privately during class, approach them one on one and say quietly: 'Hey, totally fine that you want to talk about this \u2014 but we try to keep this a safe space for everyone, so we avoid talking about politics, religion, or people who are not here. I appreciate you respecting that. No hard feelings at all, I just want to make sure we are all on the same page.'",
+        "Keep the tone warm and non-confrontational. This is not a disciplinary action \u2014 it is a gentle reminder of the culture we maintain.",
+        "If it happens again: bring it to the coaching team and Kidd. A solution will be worked out from there."
       ],
       "source": "text",
       "addedAt": "2026-07-17T00:00:00.000Z"
