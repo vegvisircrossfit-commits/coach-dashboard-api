@@ -618,6 +618,13 @@ function startRosterCron() {
 // SLACK
 // ══════════════════════════════════════════════════════════════════════════════
 
+// Deduplicate Slack events — prevent double-processing on retries
+const processedEvents = new Set();
+setInterval(() => {
+  // Clear old event IDs every 10 minutes
+  if (processedEvents.size > 1000) processedEvents.clear();
+}, 600000);
+
 // In-memory store for pending disambiguations
 // { [channelId_threadTs]: { athletes: [...], parsed: {...}, text: string, expiresAt: number } }
 const pendingDisambiguations = {};
@@ -852,6 +859,13 @@ app.post("/slack/events", async (req, res) => {
   res.json({ ok: true });
   const event = body.event || {};
   if (event.type !== "message" || event.bot_id || !event.text) return;
+  // Deduplicate — skip if we've already processed this event
+  const eventId = body.event_id || (event.client_msg_id) || (event.channel + event.ts);
+  if (processedEvents.has(eventId)) {
+    console.log(`[Slack] Skipping duplicate event: ${eventId}`);
+    return;
+  }
+  processedEvents.add(eventId);
   try {
     if (event.channel === NEW_ATHLETES_CHANNEL && event.text.toLowerCase().includes("new athlete")) await handleNewAthlete(event.text.trim());
     else if (event.channel === CURRENT_ATHLETES_CHANNEL) {
@@ -1586,23 +1600,6 @@ app.get("/admin/send-ku-email", async (req, res) => {
   const testOnly = req.query.test === "true";
   res.json({ ok: true, message: testOnly ? "Sending TEST email to Kidd only..." : "Sending KU weekly email to research staff + Kidd..." });
   sendKUWeeklyEmail(testOnly);
-});
-
-// Test endpoint — manually add a test athlete to verify Sheet write works
-app.post("/admin/test-sheet-write", async (req, res) => {
-  try {
-    const testAthlete = {
-      athlete: req.body.name || "Test Athlete",
-      goals: "Testing Sheet write",
-      coach_notes: "Added via test endpoint"
-    };
-    await addAthlete(testAthlete);
-    const found = await findAthlete(testAthlete.athlete);
-    res.json({ ok: true, found: !!found, row: found?.row_number });
-  } catch (err) {
-    console.error('[Test] Sheet write error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
 });
 
 app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); startCheckinCron(); startKUEmailCron(); });
