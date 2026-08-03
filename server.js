@@ -1588,4 +1588,21 @@ app.get("/admin/send-ku-email", async (req, res) => {
   sendKUWeeklyEmail(testOnly);
 });
 
+// Test endpoint — manually add a test athlete to verify Sheet write works
+app.post("/admin/test-sheet-write", async (req, res) => {
+  try {
+    const testAthlete = {
+      athlete: req.body.name || "Test Athlete",
+      goals: "Testing Sheet write",
+      coach_notes: "Added via test endpoint"
+    };
+    await addAthlete(testAthlete);
+    const found = await findAthlete(testAthlete.athlete);
+    res.json({ ok: true, found: !!found, row: found?.row_number });
+  } catch (err) {
+    console.error('[Test] Sheet write error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); startCheckinCron(); startKUEmailCron(); });
