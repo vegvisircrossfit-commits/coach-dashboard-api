@@ -327,11 +327,18 @@ async function sheetsBatchUpdate(data) {
 
 async function sheetsAppend(values) {
   const token = await getGoogleToken();
-  const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A3:N:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
+  const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A2:N:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ values })
   });
-  return resp.json();
+  const result = await resp.json();
+  if (!resp.ok || result.error) {
+    console.error('[Sheets] Append failed:', JSON.stringify(result));
+    throw new Error(result.error?.message || `Sheets append failed: ${resp.status}`);
+  }
+  const updatedRange = result.updates?.updatedRange || 'unknown';
+  console.log(`[Sheets] Appended to ${updatedRange}`);
+  return result;
 }
 
 function rowToAthlete(row, rowIndex) {
@@ -350,8 +357,8 @@ function rowToAthlete(row, rowIndex) {
 }
 
 async function getAllAthletes() {
-  const result = await sheetsGet("Sheet1!A3:N");
-  return (result.values || []).map((row, i) => rowToAthlete(row, 3 + i)).filter(Boolean);
+  const result = await sheetsGet("Sheet1!A2:N");
+  return (result.values || []).map((row, i) => rowToAthlete(row, 2 + i)).filter(Boolean);
 }
 
 async function findAthlete(name, wodifyId) {
@@ -663,17 +670,22 @@ IMPORTANT: "upcoming" is ONLY for travel, trips, vacations, or planned absences 
   const raw = await callClaude(system, `Parse this new athlete note:\n\n${text}`);
   const parsed = parseJSON(raw);
   if (!parsed?.athlete) { console.log("Could not parse new athlete name"); return; }
-  const existing = await findAthlete(parsed.athlete);
-  if (existing) {
-    const fields = Object.fromEntries(Object.entries(parsed).filter(([k,v]) => v && k !== "athlete"));
-    await updateAthlete(existing.row_number, fields);
-    await generateAndCacheSummary({ ...existing, ...fields });
-  } else {
-    await addAthlete(parsed);
-    const newAthlete = await findAthlete(parsed.athlete);
-    if (newAthlete) await generateAndCacheSummary({ ...newAthlete, ...parsed });
+  try {
+    const existing = await findAthlete(parsed.athlete);
+    if (existing) {
+      const fields = Object.fromEntries(Object.entries(parsed).filter(([k,v]) => v && k !== "athlete"));
+      await updateAthlete(existing.row_number, fields);
+      await generateAndCacheSummary({ ...existing, ...fields });
+    } else {
+      await addAthlete(parsed);
+      console.log(`[NewAthlete] Added to Sheet: ${parsed.athlete}`);
+      const newAthlete = await findAthlete(parsed.athlete);
+      if (newAthlete) await generateAndCacheSummary({ ...newAthlete, ...parsed });
+    }
+    console.log(`Processed new athlete: ${parsed.athlete}`);
+  } catch (err) {
+    console.error(`[NewAthlete] Failed for ${parsed.athlete}:`, err.message);
   }
-  console.log(`Processed new athlete: ${parsed.athlete}`);
 }
 
 function detectCancellation(text) {
@@ -846,7 +858,7 @@ app.post("/slack/events", async (req, res) => {
   const event = body.event || {};
   if (event.type !== "message" || event.bot_id || !event.text) return;
   const eventId = body.event_id || event.client_msg_id || (event.channel + event.ts);
-  if (processedEvents.has(eventId)) { console.log(`[Slack] Duplicate skipped`); return; }
+  if (processedEvents.has(eventId)) { console.log('[Slack] Duplicate skipped'); return; }
   processedEvents.add(eventId);
   try {
     if (event.channel === NEW_ATHLETES_CHANNEL && event.text.toLowerCase().includes("new athlete")) await handleNewAthlete(event.text.trim());
@@ -1399,7 +1411,7 @@ app.get("/admin/sync-checkins", async (req, res) => {
   }
 });
 
-// Delete athlete row from Sheet (PIN protected) — actually deletes the row to avoid gaps
+// Delete athlete row from Sheet (PIN protected)
 app.delete("/athletes/:rowNumber", async (req, res) => {
   try {
     const { pin } = req.body;
@@ -1407,26 +1419,10 @@ app.delete("/athletes/:rowNumber", async (req, res) => {
     const rowNumber = parseInt(req.params.rowNumber);
     if (isNaN(rowNumber) || rowNumber < 3) return res.status(400).json({ error: "Invalid row" });
     const token = await getGoogleToken();
-    // Use batchUpdate to delete the entire row (shifts rows up, no gap left)
-    const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        requests: [{
-          deleteDimension: {
-            range: {
-              sheetId: 0,
-              dimension: "ROWS",
-              startIndex: rowNumber - 1,  // 0-indexed
-              endIndex: rowNumber          // exclusive
-            }
-          }
-        }]
-      })
-    });
-    const result = await resp.json();
-    if (!resp.ok || result.error) throw new Error(result.error?.message || 'Delete failed');
-    console.log(`[Delete] Row ${rowNumber} deleted (shifted up)`);
+    // Clear the entire row
+    const ranges = "ABCDEFGHIJKLMN".split('').map(col => `Sheet1!${col}${rowNumber}`);
+    await sheetsBatchUpdate(ranges.map(range => ({ range, values: [['']] })));
+    console.log(`[Delete] Row ${rowNumber} cleared`);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
