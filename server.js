@@ -325,7 +325,7 @@ async function sheetsBatchUpdate(data) {
 
 async function sheetsAppend(values) {
   const token = await getGoogleToken();
-  const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A2:N:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
+  const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A:N:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ values })
   });
@@ -1222,4 +1222,4 @@ app.delete("/athletes/:rowNumber", async (req, res) => {
 
 // ══════════════════════════════════════════════════════════════════════════════
 
-app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); startCheckinCron(); });
+app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startCheckinCron(); });
