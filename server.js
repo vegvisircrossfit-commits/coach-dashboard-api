@@ -16,12 +16,6 @@ const NEW_ATHLETES_CHANNEL     = process.env.NEW_ATHLETES_CHANNEL;
 const CURRENT_ATHLETES_CHANNEL = process.env.CURRENT_ATHLETES_CHANNEL;
 const SHEET_ID                 = "1wC31nqMDhhNsXnkCxqihPVWFvRhqioDezFC9ifhXYf0";
 const ROSTER_CACHE             = process.env.ROSTER_CACHE_FILE || "/tmp/roster_cache.json";
-const RESEND_API_KEY           = process.env.RESEND_API_KEY;
-const KU_RESEARCH_EMAIL        = process.env.KU_RESEARCH_EMAIL || "Adaptivefitness@ku.edu";
-const KU_CC_EMAIL              = process.env.KU_CC_EMAIL || "kidd@vegvisircrossfit.com";
-// Exact Location and Program names as they appear in Wodify — used to pull today's WOD directly from Wodify
-const WODIFY_LOCATION          = process.env.WODIFY_LOCATION || "Vegvisir CrossFit";
-const WODIFY_PROGRAM           = process.env.WODIFY_PROGRAM  || "CrossFit";
 
 const API_BASE     = "https://api.wodify.com/v1";
 const APP_BASE     = "https://app-api.wodify.com/v1";
@@ -37,7 +31,6 @@ app.get("/health", (req, res) => res.json({
   hasAnthropicKey: !!ANTHROPIC_API_KEY,
   hasGoogleKey: !!GOOGLE_SA_JSON,
   hasWodifyKey: !!WODIFY_API_KEY,
-  hasResendKey: !!RESEND_API_KEY,
 }));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -47,33 +40,6 @@ app.get("/health", (req, res) => res.json({
 async function wodifyGet(base, endpoint) {
   const r = await fetch(`${base}${endpoint}`, { headers: WODIFY_HEADERS });
   return r.json();
-}
-
-// Pulls the actual programmed WOD straight from Wodify for a given date
-// via the Formatted Workout Endpoint (requires exact Location + Program names)
-async function getFormattedWodForDate(dateStr) {
-  const url = `${API_BASE}/workouts/formattedworkout?date=${dateStr}&location=${encodeURIComponent(WODIFY_LOCATION)}&program=${encodeURIComponent(WODIFY_PROGRAM)}`;
-  const r = await fetch(url, { headers: WODIFY_HEADERS });
-  const data = await r.json();
-  return data;
-}
-
-// Strips the HTML Wodify returns down to readable plain text
-function stripWodifyHtml(html) {
-  if (!html) return "";
-  return String(html)
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|li)>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/\n{3,}/g, "\n\n")
-    .split("\n").map(l => l.trim()).join("\n")
-    .trim();
 }
 
 const RECURRING_IDS = new Set([
@@ -331,7 +297,13 @@ async function sheetsAppend(values) {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ values })
   });
-  return resp.json();
+  const result = await resp.json();
+  if (!resp.ok || result.error) {
+    console.error('[Sheets] Append failed:', JSON.stringify(result));
+    throw new Error(result.error?.message || `Sheets append failed: ${resp.status}`);
+  }
+  console.log(`[Sheets] Appended ${values.length} row(s) successfully`);
+  return result;
 }
 
 function rowToAthlete(row, rowIndex) {
@@ -400,94 +372,6 @@ async function addAthlete(fields) {
   Object.entries(fields).forEach(([key, value]) => { if (COL[key] !== undefined) row[COL[key]] = value || ""; });
   row[COL.last_updated] = now;
   await sheetsAppend([row]);
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// KU ADAPTIVE STUDY — Google Sheet backed storage (tabs: KU_Athletes, KU_RPE_Log, KU_Benchmarks)
-// ══════════════════════════════════════════════════════════════════════════════
-//
-// Expected sheet tabs & headers (row 1 = header, data starts row 2):
-//   KU_Athletes   | name | onramp_date | active | intervention_end | added_at |
-//   KU_RPE_Log    | date | athlete | source | workout_text | adaptations | rpe | coach | logged_at |
-//   KU_Benchmarks | athlete | test_type | date | b1_time | b1_damper | b1_rpe | b1_seated | b2_score | b2_weights | b2_rpe | b2_seated | logged_at |
-
-async function kuSheetAppend(tab, values) {
-  const token = await getGoogleToken();
-  const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(tab + "!A:Z")}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
-    method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ values: [values] })
-  });
-  return resp.json();
-}
-
-async function getKUAthletes() {
-  const result = await sheetsGet("KU_Athletes!A2:E");
-  return (result.values || []).map((row, i) => {
-    const name = (row[0] || "").toString().trim();
-    if (!name) return null;
-    return {
-      row_number: i + 2,
-      athlete: name,
-      onramp_date: row[1] || "",
-      active: row[2] !== "FALSE" && row[2] !== false,
-      intervention_end: row[3] || "",
-      added_at: row[4] || ""
-    };
-  }).filter(Boolean);
-}
-
-async function addKUAthlete(name, onrampDate) {
-  const now = new Date().toLocaleString("en-US", { timeZone: "America/Chicago" });
-  let interventionEnd = "";
-  if (onrampDate) {
-    const d = new Date(onrampDate + "T00:00:00");
-    if (!isNaN(d)) { d.setDate(d.getDate() + 14 * 7); interventionEnd = d.toISOString().slice(0, 10); }
-  }
-  await kuSheetAppend("KU_Athletes", [name, onrampDate || "", "TRUE", interventionEnd, now]);
-}
-
-async function setKUAthleteActive(rowNumber, active) {
-  await sheetsBatchUpdate([{ range: `KU_Athletes!C${rowNumber}`, values: [[active ? "TRUE" : "FALSE"]] }]);
-}
-
-async function addKURPELog(entry) {
-  const now = new Date().toLocaleString("en-US", { timeZone: "America/Chicago" });
-  await kuSheetAppend("KU_RPE_Log", [
-    entry.date, entry.athlete, entry.source, entry.workout_text || "",
-    entry.adaptations || "", entry.rpe, entry.coach || "", now
-  ]);
-}
-
-async function getKURPELog() {
-  const result = await sheetsGet("KU_RPE_Log!A2:H");
-  return (result.values || []).map(row => ({
-    date: row[0] || "", athlete: row[1] || "", source: row[2] || "",
-    workout_text: row[3] || "", adaptations: row[4] || "", rpe: row[5] || "",
-    coach: row[6] || "", logged_at: row[7] || ""
-  })).filter(r => r.athlete);
-}
-
-// KU_Benchmarks tab columns:
-//   athlete | test_type | date | b1_time | b1_damper | b1_rpe | b1_seated | b2_score | b2_weights | b2_rpe | b2_seated | logged_at
-
-async function addKUBenchmark(entry) {
-  const now = new Date().toLocaleString("en-US", { timeZone: "America/Chicago" });
-  await kuSheetAppend("KU_Benchmarks", [
-    entry.athlete, entry.test_type, entry.date,
-    entry.b1_time || "", entry.b1_damper || "", entry.b1_rpe || "", entry.b1_seated ? "TRUE" : "FALSE",
-    entry.b2_score || "", entry.b2_weights || "", entry.b2_rpe || "", entry.b2_seated ? "TRUE" : "FALSE",
-    now
-  ]);
-}
-
-async function getKUBenchmarks() {
-  const result = await sheetsGet("KU_Benchmarks!A2:L");
-  return (result.values || []).map(row => ({
-    athlete: row[0] || "", test_type: row[1] || "", date: row[2] || "",
-    b1_time: row[3] || "", b1_damper: row[4] || "", b1_rpe: row[5] || "", b1_seated: row[6] === "TRUE",
-    b2_score: row[7] || "", b2_weights: row[8] || "", b2_rpe: row[9] || "", b2_seated: row[10] === "TRUE",
-    logged_at: row[11] || ""
-  })).filter(r => r.athlete);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -659,19 +543,23 @@ IMPORTANT: "upcoming" is ONLY for travel, trips, vacations, or planned absences 
   const raw = await callClaude(system, `Parse this new athlete note:\n\n${text}`);
   const parsed = parseJSON(raw);
   if (!parsed?.athlete) { console.log("Could not parse new athlete name"); return; }
-  const existing = await findAthlete(parsed.athlete);
-  if (existing) {
-    const fields = Object.fromEntries(Object.entries(parsed).filter(([k,v]) => v && k !== "athlete"));
-    await updateAthlete(existing.row_number, fields);
-    await generateAndCacheSummary({ ...existing, ...fields });
-  } else {
-    await addAthlete(parsed);
-    const newAthlete = await findAthlete(parsed.athlete);
-    if (newAthlete) await generateAndCacheSummary({ ...newAthlete, ...parsed });
+  try {
+    const existing = await findAthlete(parsed.athlete);
+    if (existing) {
+      const fields = Object.fromEntries(Object.entries(parsed).filter(([k,v]) => v && k !== "athlete"));
+      await updateAthlete(existing.row_number, fields);
+      await generateAndCacheSummary({ ...existing, ...fields });
+    } else {
+      await addAthlete(parsed);
+      console.log(`[NewAthlete] Added to Sheet: ${parsed.athlete}`);
+      const newAthlete = await findAthlete(parsed.athlete);
+      if (newAthlete) await generateAndCacheSummary({ ...newAthlete, ...parsed });
+    }
+    console.log(`Processed new athlete: ${parsed.athlete}`);
+  } catch (err) {
+    console.error(`[NewAthlete] Sheet write failed for ${parsed.athlete}:`, err.message);
   }
-  console.log(`Processed new athlete: ${parsed.athlete}`);
 }
-
 function detectCancellation(text) {
   return /cancel|cancell|leaving|left the gym|last day|ended their|dropping|quit|no longer a member/i.test(text);
 }
@@ -1107,6 +995,11 @@ app.delete("/playbook/sop/:key", async (req, res) => {
 
 
 // ══════════════════════════════════════════════════════════════════════════════
+// WOD LIBRARY — GitHub-backed shared storage
+// ══════════════════════════════════════════════════════════════════════════════
+
+
+// ══════════════════════════════════════════════════════════════════════════════
 // WODS — Google Sheet backed storage (tab: "wods")
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -1127,12 +1020,8 @@ async function getWodsFromSheet() {
       duration: parseInt(w.duration) || 0,
       weightMin: parseInt(w.weightMin) || 0,
       weightMax: parseInt(w.weightMax) || 0,
-      partner: (function(w) {
-        if (w.partner === '1' || w.partner === true || w.partner === 'true') return true;
-        // Re-detect from description if not flagged
-        var text = (w.description || '') + ' ' + (w.name || '');
-        return /you\s+go\s*\/\s*i\s+(rest|hold|go)|partner\s+(1\s*:|2\s*:|workout|wod)|with\s+a\s+partner|teams?\s+of\s+2|p1\s*[:\/]|p2\s*[:\/]|athlete\s+(1|2)\s*[:\/]|in\s+pairs|alternating/i.test(text);
-      })(w),
+      partner: (w.partner === '1' || w.partner === true || w.partner === 'true') ||
+        /you\s+go\s*\/\s*i\s+(rest|hold|go)|partner\s+(1\s*:|2\s*:|workout|wod)|with\s+a\s+partner|teams?\s+of\s+2|p1\s*[:\/]|p2\s*[:\/]|athlete\s+(1|2)\s*[:\/]|in\s+pairs|alternating/i.test((w.description || '') + ' ' + (w.name || '')),
       description: w.description || ''
     };
   }).filter(w => w.name && typeof w.name === 'string' && w.name.trim().length > 0);
@@ -1408,173 +1297,4 @@ app.delete("/athletes/:rowNumber", async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// KU ADAPTIVE STUDY — routes
-// ══════════════════════════════════════════════════════════════════════════════
-
-app.get("/ku/athletes", async (req, res) => {
-  try { res.json({ athletes: await getKUAthletes() }); } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post("/ku/athletes", async (req, res) => {
-  try {
-    const { name, onramp_date } = req.body;
-    if (!name || !name.trim()) return res.status(400).json({ error: "Missing name" });
-    await addKUAthlete(name.trim(), onramp_date || "");
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// Soft delete — flips active flag so historical RPE/benchmark rows are never lost
-app.patch("/ku/athletes/:rowNumber/active", async (req, res) => {
-  try {
-    const rowNumber = parseInt(req.params.rowNumber);
-    if (isNaN(rowNumber) || rowNumber < 2) return res.status(400).json({ error: "Invalid row" });
-    await setKUAthleteActive(rowNumber, !!req.body.active);
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// Pulls today's actual programmed WOD directly from Wodify (Formatted Workout Endpoint),
-// so a coach can pick "Today's WOD" without needing it pre-synced into the WOD library.
-app.get("/ku/wods-today", async (req, res) => {
-  try {
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
-    const data = await getFormattedWodForDate(today);
-    const wod = data && data.APIWod;
-    if (!wod || !wod.FormattedWOD) {
-      return res.json({ date: today, workouts: [] });
-    }
-    res.json({
-      date: today,
-      workouts: [{
-        id: "wodify-" + today,
-        name: (wod.WodHeader && wod.WodHeader.Name) || wod.Title || "Today's WOD",
-        description: stripWodifyHtml(wod.FormattedWOD)
-      }]
-    });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post("/ku/rpe", async (req, res) => {
-  try {
-    const { athlete, source, workout_text, adaptations, rpe, coach, date } = req.body;
-    if (!athlete || !rpe) return res.status(400).json({ error: "Missing athlete or rpe" });
-    await addKURPELog({
-      date: date || new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }),
-      athlete, source, workout_text, adaptations, rpe, coach
-    });
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get("/ku/rpe", async (req, res) => {
-  try { res.json({ entries: await getKURPELog() }); } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post("/ku/benchmark", async (req, res) => {
-  try {
-    const { athlete, test_type, date, b1_time, b1_damper, b1_rpe, b1_seated, b2_score, b2_weights, b2_rpe, b2_seated } = req.body;
-    if (!athlete || !test_type) return res.status(400).json({ error: "Missing athlete or test_type" });
-    await addKUBenchmark({
-      athlete, test_type, date: date || new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" }),
-      b1_time, b1_damper, b1_rpe, b1_seated, b2_score, b2_weights, b2_rpe, b2_seated
-    });
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get("/ku/benchmarks", async (req, res) => {
-  try { res.json({ benchmarks: await getKUBenchmarks() }); } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ── Weekly summary email to KU research staff (Resend) ──
-
-async function sendKUWeeklyEmail(testOnly) {
-  console.log(`[KU Email] Building ${testOnly ? "TEST " : ""}weekly summary...`);
-  try {
-    if (!RESEND_API_KEY) { console.log("[KU Email] Skipped — RESEND_API_KEY not set"); return; }
-
-    const athletes = await getKUAthletes();
-    const rpeLog = await getKURPELog();
-    const benchmarks = await getKUBenchmarks();
-
-    const now = new Date();
-    const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekAgoStr = weekAgo.toISOString().slice(0, 10);
-    const todayStr = now.toISOString().slice(0, 10);
-
-    let html = `<h2>Vegvisir CrossFit — KU Adaptive Study Weekly Summary</h2>`;
-    html += `<p>Week of ${weekAgoStr} to ${todayStr}</p>`;
-
-    if (!athletes.length) {
-      html += `<p>No athletes currently on the KU study roster.</p>`;
-    }
-
-    for (const a of athletes) {
-      const athleteRpe = rpeLog.filter(r => r.athlete === a.athlete);
-      const weekRpe = athleteRpe.filter(r => r.date >= weekAgoStr);
-      const athleteBench = benchmarks.filter(b => b.athlete === a.athlete);
-      const baseline = athleteBench.find(b => b.test_type === "Baseline");
-      const post = athleteBench.find(b => b.test_type === "Post");
-
-      html += `<h3>${a.athlete}${a.active ? "" : " (removed from active roster)"}</h3>`;
-      html += `<p>On-ramp date: ${a.onramp_date || "—"}</p>`;
-      html += `<p><b>Sessions this week: ${weekRpe.length}</b></p>`;
-      if (weekRpe.length) {
-        html += `<ul>`;
-        weekRpe.forEach(r => {
-          const wod = r.workout_text ? r.workout_text.slice(0, 120) : "";
-          html += `<li>${r.date} — ${r.source}${wod ? ": " + wod : ""}${r.adaptations ? " (adapted: " + r.adaptations + ")" : ""} — <b>RPE ${r.rpe}</b></li>`;
-        });
-        html += `</ul>`;
-      }
-      html += `<p>Total logged sessions to date: ${athleteRpe.length}</p>`;
-      if (baseline) html += `<p>Baseline work capacity (${baseline.date}): B1 ${baseline.b1_time || "—"}${baseline.b1_damper ? " (damper " + baseline.b1_damper + ")" : ""}${baseline.b1_rpe ? ", RPE " + baseline.b1_rpe : ""}${baseline.b1_seated ? " [seated]" : ""}; B2 ${baseline.b2_score || "—"}${baseline.b2_weights ? " @ " + baseline.b2_weights : ""}${baseline.b2_rpe ? ", RPE " + baseline.b2_rpe : ""}${baseline.b2_seated ? " [seated]" : ""}</p>`;
-      if (post) html += `<p>Post work capacity (${post.date}): B1 ${post.b1_time || "—"}${post.b1_damper ? " (damper " + post.b1_damper + ")" : ""}${post.b1_rpe ? ", RPE " + post.b1_rpe : ""}${post.b1_seated ? " [seated]" : ""}; B2 ${post.b2_score || "—"}${post.b2_weights ? " @ " + post.b2_weights : ""}${post.b2_rpe ? ", RPE " + post.b2_rpe : ""}${post.b2_seated ? " [seated]" : ""}</p>`;
-      html += `<hr/>`;
-    }
-
-    const resp = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM || "Vegvisir CrossFit <onboarding@resend.dev>",
-        to: testOnly ? [KU_CC_EMAIL] : [KU_RESEARCH_EMAIL, KU_CC_EMAIL],
-        subject: `${testOnly ? "[TEST] " : ""}KU Adaptive Study — Weekly Summary (${todayStr})`,
-        html
-      })
-    });
-    const data = await resp.json();
-    if (!resp.ok) console.error("[KU Email] Send failed:", data);
-    else console.log("[KU Email] Sent:", data.id || data);
-  } catch (err) { console.error("[KU Email] Error:", err.message); }
-}
-
-// Runs every Monday at 6:00 AM Central
-let lastKUEmailWeek = null;
-function startKUEmailCron() {
-  setInterval(() => {
-    const central = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Chicago" }));
-    const hhmm = central.toTimeString().slice(0, 5);
-    const isMonday = central.getDay() === 1;
-    const weekKey = central.toISOString().slice(0, 10);
-    if (isMonday && hhmm === "06:00" && lastKUEmailWeek !== weekKey) {
-      lastKUEmailWeek = weekKey;
-      console.log("[KU Email Cron] Running weekly send");
-      sendKUWeeklyEmail();
-    }
-  }, 30000);
-  console.log("[KU Email Cron] Started");
-}
-
-// Manual trigger for testing.
-// GET /admin/send-ku-email          -> real send, goes to KU research staff + Kidd
-// GET /admin/send-ku-email?test=true -> test send, goes to Kidd only, subject prefixed [TEST]
-app.get("/admin/send-ku-email", async (req, res) => {
-  const testOnly = req.query.test === "true";
-  res.json({ ok: true, message: testOnly ? "Sending TEST email to Kidd only..." : "Sending KU weekly email to research staff + Kidd..." });
-  sendKUWeeklyEmail(testOnly);
-});
-
-app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); startCheckinCron(); startKUEmailCron(); });
+app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRosterCron(); startCheckinCron(); });
