@@ -902,37 +902,55 @@ app.get("/roster/:classId", (req, res) => {
 app.get("/today-classes", async (req, res) => {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
   try {
-    // Use sign-ins endpoint to get today's classes — no binary search needed
-    const data = await wodifyGet(API_BASE, `/classes/sign-ins/clients?sort=desc_id&page_size=1000`);
-    const signIns = data.class_sign_ins || [];
+    // Fetch sign-ins and reservations in parallel
+    const [signInData, reservationData] = await Promise.all([
+      wodifyGet(API_BASE, `/classes/sign-ins/clients?sort=desc_id&page_size=1000`),
+      wodifyGet(API_BASE, `/client_class_reservations?page_size=200&sort=desc_id`)
+    ]);
 
-    // Filter to today and group by class_id
+    const signIns = signInData.class_sign_ins || [];
+    const reservations = reservationData.client_class_reservations || [];
+
     const classMap = {};
+
+    // Process sign-ins first
     for (const s of signIns) {
       const signInDate = s.local_class_start_datetime?.slice(0, 10);
       if (signInDate !== today) continue;
       const cid = s.class_id;
       if (!classMap[cid]) {
         classMap[cid] = {
-          id: cid,
-          name: s.class,
+          id: cid, name: s.class,
           start_time: s.local_class_start_datetime?.slice(11, 16) || '',
-          program_id: s.program_id,
-          location_id: s.location_id,
-          signed_in: 0,
-          reserved: 0,
-          class_limit: 0,
-          coaches: [],
-          clients: []
+          signed_in: 0, reserved: 0, clients: []
         };
       }
       classMap[cid].signed_in++;
-      classMap[cid].clients.push({ client: s.client, client_id: s.client_id });
+      classMap[cid].clients.push({ client: s.client, client_id: s.client_id, status: 'signed_in' });
     }
 
-    // Sort by start time
+    // Add reservations (reserved but not yet signed in)
+    const signedInIds = new Set(signIns.filter(s => s.local_class_start_datetime?.slice(0, 10) === today).map(s => `${s.class_id}_${s.client_id}`));
+    for (const r of reservations) {
+      const resDate = r.local_class_start_datetime?.slice(0, 10);
+      if (resDate !== today) continue;
+      if (r.reservation_status_id === 1) continue; // cancelled
+      const key = `${r.class_id}_${r.client_id}`;
+      if (signedInIds.has(key)) continue; // already counted as signed in
+      const cid = r.class_id;
+      if (!classMap[cid]) {
+        classMap[cid] = {
+          id: cid, name: r.class || '',
+          start_time: r.local_class_start_datetime?.slice(11, 16) || '',
+          signed_in: 0, reserved: 0, clients: []
+        };
+      }
+      classMap[cid].reserved++;
+      classMap[cid].clients.push({ client: r.client, client_id: r.client_id, status: 'reserved' });
+    }
+
     const classes = Object.values(classMap).sort((a, b) => a.start_time > b.start_time ? 1 : -1);
-    console.log(`[today-classes] Found ${classes.length} classes with sign-ins for ${today}`);
+    console.log(`[today-classes] ${classes.length} classes — ${signIns.filter(s=>s.local_class_start_datetime?.slice(0,10)===today).length} signed in, ${classes.reduce((n,c)=>n+c.reserved,0)} reserved`);
     res.json({ classes, date: today });
   } catch (err) {
     console.error('[today-classes] Error:', err.message);
