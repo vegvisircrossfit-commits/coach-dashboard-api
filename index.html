@@ -992,6 +992,91 @@
   }
 
 
+
+  // ══════════════════════════════════════════════════════
+  // NO NOTES ROW — athlete in class with no Sheet profile
+  // ══════════════════════════════════════════════════════
+
+  function NoNotesRow(props) {
+    var athlete = props.athlete;
+    var onAdded = props.onAdded;
+    var ex = useState(false); var expanded = ex[0]; var setExpanded = ex[1];
+    var sv = useState(null); var saving = sv[0]; var setSaving = sv[1];
+    var gv = useState(''); var goals = gv[0]; var setGoals = gv[1];
+    var iv = useState(''); var injuries = iv[0]; var setInjuries = iv[1];
+    var nv = useState(''); var notes = nv[0]; var setNotes = nv[1];
+    var rs = useState(athlete.reserved ? 'reserved' : 'signed_in');
+    var status = rs[0];
+
+    var save = function() {
+      if (!goals && !injuries && !notes) return;
+      setSaving('saving');
+      fetch(PROXY+'/athletes', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          athlete: athlete.athlete,
+          goals: goals,
+          injuries: injuries,
+          coach_notes: notes
+        })
+      })
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.ok) {
+          setSaving('saved');
+          // Fetch the new athlete row
+          fetch(PROXY+'/athletes/search?name='+encodeURIComponent(athlete.athlete))
+            .then(function(r){return r.json();})
+            .then(function(a){ if(a.athlete && onAdded) onAdded(a); })
+            .catch(function(){});
+        } else { setSaving('error'); }
+      })
+      .catch(function(){setSaving('error');});
+    };
+
+    return h('div',{style:{background:C.navy2,border:'1px solid '+(expanded?C.accent:C.line),borderRadius:6,marginBottom:6,overflow:'hidden'}},
+      h('div',{style:{padding:'10px 14px',display:'flex',alignItems:'center',gap:10,cursor:'pointer'},onClick:function(){setExpanded(function(p){return !p;});}},
+        h('div',{style:{width:32,height:32,borderRadius:'50%',background:C.navy3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:C.textFaint,flexShrink:0}},
+          (athlete.athlete||'?').charAt(0).toUpperCase()),
+        h('div',{style:{flex:1}},
+          h('div',{style:{fontSize:13,color:C.textDim,fontWeight:600}},athlete.athlete),
+          h('div',{style:{fontSize:10,color:C.textFaint}},status==='reserved'?'Reserved — not yet signed in':'No profile on file')
+        ),
+        status==='reserved'&&h('span',{style:{fontSize:9,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:C.gold,background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.3)',padding:'1px 6px',borderRadius:2,marginRight:8}},'Reserved'),
+        !expanded
+          ? h('button',{className:'btn',onClick:function(e){e.stopPropagation();setExpanded(true);},style:{fontSize:10,fontWeight:700,color:C.accentHi,background:'rgba(62,110,142,0.1)',border:'1px solid rgba(62,110,142,0.3)',padding:'3px 10px',borderRadius:3}},'+ Add Notes')
+          : h('span',{style:{color:C.textFaint,fontSize:12}},'▲')
+      ),
+      expanded&&h('div',{className:'fade-in',style:{borderTop:'1px solid '+C.line,padding:'12px 14px',background:C.navy}},
+        saving==='saved'
+          ? h('div',{style:{fontSize:12,color:C.green}},'✓ Profile created — refresh to see full card')
+          : h('div',null,
+              h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.textFaint,marginBottom:10}},'Quick Profile — '+athlete.athlete),
+              h('div',{style:{marginBottom:8}},
+                h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Goals'),
+                h('input',{value:goals,onChange:function(e){setGoals(e.target.value);},placeholder:'e.g. Lose weight, get stronger',style:{width:'100%',fontSize:12}})
+              ),
+              h('div',{style:{marginBottom:8}},
+                h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Injuries / Limitations'),
+                h('input',{value:injuries,onChange:function(e){setInjuries(e.target.value);},placeholder:'e.g. Bad right knee',style:{width:'100%',fontSize:12}})
+              ),
+              h('div',{style:{marginBottom:10}},
+                h('label',{style:{fontSize:9,color:C.textFaint,display:'block',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.1em'}},'Coach Notes'),
+                h('textarea',{value:notes,onChange:function(e){setNotes(e.target.value);},placeholder:'Any notes from today...',style:{width:'100%',fontSize:12,minHeight:60,resize:'vertical'}})
+              ),
+              h('div',{style:{display:'flex',gap:8}},
+                h('button',{className:'btn',onClick:save,disabled:saving==='saving'||(!goals&&!injuries&&!notes),
+                  style:{background:(!goals&&!injuries&&!notes)?C.navy3:C.accent,color:(!goals&&!injuries&&!notes)?C.textFaint:'#fff',padding:'6px 14px',fontWeight:700,fontSize:11,letterSpacing:'0.08em',textTransform:'uppercase',borderRadius:3}},
+                  saving==='saving'?'Saving…':'Save Profile'),
+                h('button',{className:'btn',onClick:function(){setExpanded(false);},style:{background:'none',color:C.textFaint,padding:'6px 10px',fontWeight:700,fontSize:11,borderRadius:3,border:'1px solid '+C.line}},'Cancel'),
+                saving==='error'&&h('span',{style:{fontSize:11,color:'#ef4444',alignSelf:'center'}},'⚠ Error')
+              )
+            )
+      )
+    );
+  }
+
   // ══════════════════════════════════════════════════════
   // CLASSES TAB — Today's classes via sign-ins endpoint
   // ══════════════════════════════════════════════════════
@@ -1081,9 +1166,15 @@
             h('div',{style:{fontSize:10,letterSpacing:'0.2em',color:status==='live'?'#22C55E':C.accentHi,fontWeight:700,textTransform:'uppercase',marginBottom:2}},status==='live'?'● Live Now':fmtTime(cls.start_time||cls.local_class_start_datetime)),
             h('div',{style:{fontSize:20,fontWeight:900,textTransform:'uppercase'}},cls.name)
           ),
-          h('div',{style:{textAlign:'center'}},
-            h('div',{style:{fontSize:22,fontWeight:900,color:C.accentHi,lineHeight:1}},cls.signed_in||signedInClients.length||0),
-            h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Signed In')
+          h('div',{style:{display:'flex',gap:14}},
+            h('div',{style:{textAlign:'center'}},
+              h('div',{style:{fontSize:22,fontWeight:900,color:C.accentHi,lineHeight:1}},cls.signed_in||0),
+              h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Signed In')
+            ),
+            cls.reserved>0&&h('div',{style:{textAlign:'center'}},
+              h('div',{style:{fontSize:22,fontWeight:900,color:C.gold,lineHeight:1}},cls.reserved),
+              h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Reserved')
+            )
           )
         ),
         h('div',{style:{padding:'16px 20px',flex:1,overflowY:'auto'}},
@@ -1099,11 +1190,15 @@
                 withoutNotes.length>0&&h('div',{style:{marginTop:withNotes.length?20:0}},
                   h('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:C.textFaint,marginBottom:8}},withoutNotes.length+' athlete'+(withoutNotes.length===1?'':'s')+' — no notes on file'),
                   withoutNotes.map(function(a){
-                    return h('div',{key:a.athlete,style:{background:C.navy2,border:'1px solid '+C.line,borderRadius:6,padding:'10px 14px',marginBottom:6,display:'flex',alignItems:'center',gap:10}},
-                      h('div',{style:{width:32,height:32,borderRadius:'50%',background:C.navy3,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:C.textFaint,flexShrink:0}},(a.athlete||'?').charAt(0).toUpperCase()),
-                      h('div',{style:{fontSize:13,color:C.textDim}},a.athlete),
-                      h('div',{style:{marginLeft:'auto',fontSize:10,color:C.textFaint}},'No profile yet')
-                    );
+                    var isReserved=a.status==='reserved';
+                    return h(NoNotesRow,{key:a.athlete,athlete:Object.assign({},a,{reserved:isReserved}),onAdded:function(newAthlete){
+                      setAllAthletes(function(prev){return [...(prev||[]),newAthlete];});
+                      setSelectedClass(function(prev){
+                        var updated=Object.assign({},prev);
+                        updated.clients=(updated.clients||[]).map(function(c){return c.client===a.athlete?Object.assign({},c,{_added:true}):c;});
+                        return updated;
+                      });
+                    }});
                   })
                 )
               )
@@ -1149,9 +1244,15 @@
                         h('div',{style:{fontSize:20,fontWeight:900,textTransform:'uppercase',marginBottom:2}},fmtTime(cls.start_time||cls.local_class_start_datetime)),
                         h('div',{style:{fontSize:13,color:C.textDim}},cls.name)
                       ),
-                      h('div',{style:{textAlign:'center',marginRight:8}},
-                        h('div',{style:{fontSize:26,fontWeight:900,color:C.accentHi,lineHeight:1}},count),
-                        h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Signed In')
+                      h('div',{style:{display:'flex',gap:12,marginRight:8}},
+                        h('div',{style:{textAlign:'center'}},
+                          h('div',{style:{fontSize:22,fontWeight:900,color:C.accentHi,lineHeight:1}},cls.signed_in||0),
+                          h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Signed In')
+                        ),
+                        cls.reserved>0&&h('div',{style:{textAlign:'center'}},
+                          h('div',{style:{fontSize:22,fontWeight:900,color:C.gold,lineHeight:1}},cls.reserved),
+                          h('div',{style:{fontSize:8,color:C.textFaint,textTransform:'uppercase',letterSpacing:'0.1em'}},'Reserved')
+                        )
                       ),
                       h('div',{style:{color:C.textFaint,fontSize:16}},'›')
                     )
