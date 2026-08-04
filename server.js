@@ -841,8 +841,45 @@ app.post("/admin/upload-wods", express.json({ limit: "10mb" }), async (req, res)
 
 app.get("/admin/build-roster", async (req, res) => {
   res.json({ ok: true, message: "Building roster..." });
-  buildRosterCache();
+  buildRosterFromSignIns();
 });
+
+async function buildRosterFromSignIns() {
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  console.log(`[Roster] Building from sign-ins for ${today}`);
+  try {
+    const data = await wodifyGet(API_BASE, `/classes/sign-ins/clients?sort=desc_id&page_size=1000`);
+    const signIns = (data.class_sign_ins || []).filter(s => s.local_class_start_datetime?.slice(0, 10) === today);
+
+    const athletes = await getAllAthletes();
+    const byWodifyId = {};
+    const byName = {};
+    athletes.forEach(a => {
+      if (a.wodify_id) byWodifyId[String(a.wodify_id)] = a;
+      byName[a.athlete.toLowerCase()] = a;
+    });
+
+    const classMap = {};
+    for (const s of signIns) {
+      const cid = String(s.class_id);
+      if (!classMap[cid]) classMap[cid] = { class_id: cid, class_name: s.class, start_time: s.local_class_start_datetime, athletes: [], client_names: [], client_ids: [] };
+      const sheetAthlete = byWodifyId[String(s.client_id)] || byName[s.client.toLowerCase()];
+      classMap[cid].client_names.push(s.client.toLowerCase());
+      classMap[cid].client_ids.push(String(s.client_id));
+      if (sheetAthlete) {
+        let summary = null;
+        if (sheetAthlete.ai_summary) { try { summary = JSON.parse(sheetAthlete.ai_summary); } catch {} }
+        classMap[cid].athletes.push({ ...sheetAthlete, coaching_brief: summary, has_notes: true });
+      } else {
+        classMap[cid].athletes.push({ athlete: s.client, row_number: null, has_notes: false, coaching_brief: null });
+      }
+    }
+
+    const cache = { date: today, built_at: new Date().toISOString(), classes: classMap };
+    fs.writeFileSync(ROSTER_CACHE, JSON.stringify(cache));
+    console.log(`[Roster] Built ${Object.keys(classMap).length} classes from sign-ins`);
+  } catch (err) { console.error('[Roster] Error:', err.message); }
+}
 
 app.get("/roster", (req, res) => {
   try {
@@ -865,9 +902,42 @@ app.get("/roster/:classId", (req, res) => {
 app.get("/today-classes", async (req, res) => {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
   try {
-    const found = await findTodaysClasses(today);
-    res.json({ classes: found, date: today });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    // Use sign-ins endpoint to get today's classes — no binary search needed
+    const data = await wodifyGet(API_BASE, `/classes/sign-ins/clients?sort=desc_id&page_size=1000`);
+    const signIns = data.class_sign_ins || [];
+
+    // Filter to today and group by class_id
+    const classMap = {};
+    for (const s of signIns) {
+      const signInDate = s.local_class_start_datetime?.slice(0, 10);
+      if (signInDate !== today) continue;
+      const cid = s.class_id;
+      if (!classMap[cid]) {
+        classMap[cid] = {
+          id: cid,
+          name: s.class,
+          start_time: s.local_class_start_datetime?.slice(11, 16) || '',
+          program_id: s.program_id,
+          location_id: s.location_id,
+          signed_in: 0,
+          reserved: 0,
+          class_limit: 0,
+          coaches: [],
+          clients: []
+        };
+      }
+      classMap[cid].signed_in++;
+      classMap[cid].clients.push({ client: s.client, client_id: s.client_id });
+    }
+
+    // Sort by start time
+    const classes = Object.values(classMap).sort((a, b) => a.start_time > b.start_time ? 1 : -1);
+    console.log(`[today-classes] Found ${classes.length} classes with sign-ins for ${today}`);
+    res.json({ classes, date: today });
+  } catch (err) {
+    console.error('[today-classes] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/wodify/*", async (req, res) => {
