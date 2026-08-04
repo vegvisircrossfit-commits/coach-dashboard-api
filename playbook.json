@@ -2398,8 +2398,34 @@
       ],
       "source": "text",
       "addedAt": "2026-07-17T00:00:00.000Z"
+    },
+    "sop_pt_cancellation_policy_001": {
+      "title": "Personal Training \u2014 Cancellation Policy",
+      "category": "Coaching",
+      "summary": "If a client cancels within 24 hours of their session with no reschedule, the session is lost. If they cancel before the 24-hour window, they keep the session.",
+      "steps": [
+        "If a client cancels their personal training session MORE THAN 24 hours before their scheduled time: the session is kept and can be rescheduled.",
+        "If a client cancels their personal training session WITHIN 24 hours of their scheduled time with no reschedule: the session is lost. It cannot be recovered."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-18T00:00:00.000Z"
+    },
+    "sop_pt_reschedule_001": {
+      "title": "Personal Training \u2014 Rescheduling a Session",
+      "category": "Coaching",
+      "summary": "How to reschedule a personal training session. If the appointment time has not yet passed, the session can be rescheduled within 30 days. If it is after the appointment time, the session is lost.",
+      "steps": [
+        "If the athlete reaches out BEFORE the appointment time: the session can be rescheduled. They must use it within 30 days of the original appointment date.",
+        "Ask them what time works for them. If you are available at that time, go ahead and schedule it.",
+        "If you are not available at their preferred time, coordinate to find the next best time that works for both of you.",
+        "If they need a specific time that you cannot cover, look for another coach who is available at that time.",
+        "If you are unsure of coach availabilities, post in #coach-substitutions on Slack to figure out who is available for the athlete.",
+        "If the athlete reaches out AFTER the appointment time has already passed: the session is lost per the cancellation policy."
+      ],
+      "source": "text",
+      "addedAt": "2026-07-18T00:00:00.000Z"
     }
   },
-  "lastUpdated": "2026-07-17T00:00:00.000Z",
+  "lastUpdated": "2026-07-18T00:00:00.000Z",
   "version": 3
 }
