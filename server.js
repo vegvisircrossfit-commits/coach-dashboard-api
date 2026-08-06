@@ -400,11 +400,45 @@ async function getAllAthletes() {
   return (result.values || []).map((row, i) => rowToAthlete(row, 2 + i)).filter(Boolean);
 }
 
+// Levenshtein distance for fuzzy name matching
+function editDistance(a, b) {
+  a = a.toLowerCase(); b = b.toLowerCase();
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function nameSimilar(a, b) {
+  a = a.toLowerCase().trim(); b = b.toLowerCase().trim();
+  if (a === b) return true;
+  // Check if first names match and last names are close (edit distance <= 2)
+  const aParts = a.split(' '); const bParts = b.split(' ');
+  if (aParts[0] === bParts[0] && aParts.length > 1 && bParts.length > 1) {
+    return editDistance(aParts.slice(1).join(' '), bParts.slice(1).join(' ')) <= 2;
+  }
+  // Full name edit distance <= 2 for short names
+  return editDistance(a, b) <= 2;
+}
+
 async function findAthlete(name, wodifyId) {
   const athletes = await getAllAthletes();
-  for (const a of athletes) {
-    if (wodifyId && a.wodify_id === String(wodifyId)) return a;
-    if (name && a.athlete.toLowerCase() === name.toLowerCase()) return a;
+  // Exact wodify_id match first
+  if (wodifyId) {
+    const byId = athletes.find(a => a.wodify_id === String(wodifyId));
+    if (byId) return byId;
+  }
+  if (!name) return null;
+  // Exact name match
+  const exact = athletes.find(a => a.athlete.toLowerCase() === name.toLowerCase());
+  if (exact) return exact;
+  // Fuzzy name match — catches typos and spelling variations
+  const fuzzy = athletes.find(a => nameSimilar(a.athlete, name));
+  if (fuzzy) {
+    console.log(`[FuzzyMatch] "${name}" matched to "${fuzzy.athlete}"`);
+    return fuzzy;
   }
   return null;
 }
@@ -414,7 +448,8 @@ async function findAthletesByFirstName(firstName) {
   const lower = firstName.toLowerCase().trim();
   return athletes.filter(a => {
     const parts = a.athlete.toLowerCase().split(' ');
-    return parts[0] === lower;
+    // Exact or close first name match (catches "Joe" vs "Jo")
+    return parts[0] === lower || editDistance(parts[0], lower) <= 1;
   });
 }
 
