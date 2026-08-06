@@ -962,8 +962,8 @@
             : h('div',{style:{fontSize:12,color:C.textDim,lineHeight:1.6,whiteSpace:'pre-wrap'}},noteContent||h('em',{style:{color:C.textFaint}},'No coach notes yet.'))
         ),
 
-        // Delete section — only show for cancelled athletes
-        isCancelled&&athlete.row_number&&h('div',{style:{marginTop:16,paddingTop:14,borderTop:'1px solid rgba(239,68,68,0.2)'}},
+        // Delete section — show for cancelled athletes OR when allowDelete prop is true
+        (isCancelled||props.allowDelete)&&athlete.row_number&&h('div',{style:{marginTop:16,paddingTop:14,borderTop:'1px solid '+(isCancelled?'rgba(239,68,68,0.2)':C.line)}},
           deleteStatus==='deleted'
             ? h('div',{style:{fontSize:12,color:C.green}},'✓ Removed from Sheet')
             : showPinPrompt
@@ -1142,16 +1142,38 @@
       // Match signed-in clients to Sheet athletes
       var classAthletes=[];
       var signedInClients=cls.clients||[];
-      var byWodifyId={}; var byName={};
-      (allAthletes||[]).forEach(function(a){
+      // Simple edit distance for client-side fuzzy matching
+      var editDist=function(a,b){
+        a=a.toLowerCase();b=b.toLowerCase();
+        var m=a.length,n=b.length,dp=[];
+        for(var i=0;i<=m;i++){dp[i]=[];for(var j=0;j<=n;j++)dp[i][j]=i===0?j:j===0?i:0;}
+        for(var i=1;i<=m;i++)for(var j=1;j<=n;j++)dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+        return dp[m][n];
+      };
+      var fuzzyFindAthlete=function(name,athletes){
+        var lower=(name||'').toLowerCase().trim();
+        var exact=athletes.find(function(a){return a.athlete.toLowerCase()===lower;});
+        if(exact) return exact;
+        // First name match + close last name
+        var parts=lower.split(' ');
+        var fuzzy=athletes.find(function(a){
+          var ap=a.athlete.toLowerCase().split(' ');
+          if(ap[0]!==parts[0]) return false;
+          if(parts.length>1&&ap.length>1) return editDist(ap.slice(1).join(' '),parts.slice(1).join(' '))<=2;
+          return true;
+        });
+        return fuzzy||null;
+      };
+
+      var byWodifyId={}; var allAthletesList=allAthletes||[];
+      allAthletesList.forEach(function(a){
         if(a.wodify_id) byWodifyId[String(a.wodify_id)]=a;
-        byName[a.athlete.toLowerCase()]=a;
       });
       var seen=new Set();
       signedInClients.forEach(function(c){
         var key=String(c.client_id||c.client);
         if(seen.has(key)) return; seen.add(key);
-        var sheetAthlete=byWodifyId[String(c.client_id)]||byName[(c.client||'').toLowerCase()];
+        var sheetAthlete=byWodifyId[String(c.client_id)]||fuzzyFindAthlete(c.client,allAthletesList);
         if(sheetAthlete) classAthletes.push(sheetAthlete);
         else classAthletes.push({athlete:c.client,row_number:null,has_notes:false});
       });
@@ -1368,7 +1390,7 @@
           )
         ),
         h('div',{style:{padding:'16px 20px',flex:1,overflowY:'auto'}},
-          h(AthleteCard,{athlete:selectedAthlete,onSaveNote:handleSaveNote,onCheckin:handleCheckin,onDelete:handleDelete,forceExpanded:true})
+          h(AthleteCard,{athlete:selectedAthlete,onSaveNote:handleSaveNote,onCheckin:handleCheckin,onDelete:handleDelete,forceExpanded:true,allowDelete:true})
         )
       );
     }
