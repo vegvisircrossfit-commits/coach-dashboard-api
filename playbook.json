@@ -2424,8 +2424,96 @@
       ],
       "source": "text",
       "addedAt": "2026-07-18T00:00:00.000Z"
+    },
+    "sop_travel_pregnancy_home_workouts_001": {
+      "title": "Travel, Pregnancy & At-Home Workout Guides",
+      "category": "Coaching",
+      "summary": "If an athlete asks for travel workouts, pregnancy programming, at-home workouts, or any other guides, share the relevant section from this link.",
+      "steps": [
+        "If an athlete asks for travel workouts, pregnancy programming, at-home workouts, or any other guides, go to the following link and share the relevant guide with them:",
+        "https://docs.google.com/document/d/1JYjgXqM-NyFC7pUPCfL7HNVit2auJbQ4-JU-VZ9AraE/edit?usp=drivesdk"
+      ],
+      "source": "text",
+      "addedAt": "2026-08-06T00:00:00.000Z"
+    },
+    "sop_membership_transfer_001": {
+      "title": "Membership & Class Transfer \u2014 Policy",
+      "category": "Sales & Member Ops",
+      "summary": "Memberships and class credits cannot be transferred to outside members. Personal training sessions can be transferred between existing gym members only.",
+      "steps": [
+        "If an athlete asks to transfer their membership or class credits to someone outside the gym: the answer is no. We cannot verify whether someone is prepared for classes or has completed on-ramp, and transfers to outside members are not permitted.",
+        "If two existing gym members want to transfer personal training sessions between themselves: this is allowed.",
+        "To process a PT session transfer: create a free membership for the receiving athlete and add the remaining number of personal training sessions to their account.",
+        "Class credits cannot be transferred under any circumstances \u2014 only personal training sessions between existing members."
+      ],
+      "source": "text",
+      "addedAt": "2026-08-06T00:00:00.000Z"
+    },
+    "sop_sync_calendar_001": {
+      "title": "Syncing Your Wodify Calendar \u2014 Required for All Coaches",
+      "category": "Coaching",
+      "summary": "All coaches must sync their Wodify schedule to their personal Google Calendar so classes and appointments are automatically blocked off. Required as part of being a coach at Vegvisir.",
+      "steps": [
+        "Go to app.wodify.com.",
+        "Go to People, then Athletes. Search your name and click on your profile.",
+        "Go to Personal Information and scroll to the bottom.",
+        "Click the Sync Calendar button.",
+        "Enter the email address of the calendar you want to sync with.",
+        "Click Sync and allow any authorization prompts that appear.",
+        "Once synced, all your classes and appointments from Wodify will automatically push to your personal calendar and block off your time.",
+        "This is required for all coaches \u2014 it ensures your schedule is always up to date and prevents missed classes or scheduling conflicts."
+      ],
+      "source": "text",
+      "addedAt": "2026-08-06T00:00:00.000Z"
+    },
+    "sop_water_filter_001": {
+      "title": "Water Fountain \u2014 Filter Replacement",
+      "category": "Maintenance",
+      "summary": "When the water fountain says 'Change Filter', replace it using the new filter from the top of the chrome shelves in the supply closet and the water fountain key from the front desk key ring.",
+      "steps": [
+        "Grab the dog water bowl or a small bucket from next to the water fountain \u2014 you will need it to catch water during the swap. The water is potable so no concerns there.",
+        "Go to the supply closet, turn left, and look at the TOP of the chrome shelves. Grab one of the large water filters \u2014 they are about the size of an Arnold Palmer can. Unwrap it.",
+        "Get the water fountain key from the front desk key ring. It looks like a female end for an Allen wrench \u2014 a small square-shaped tool.",
+        "Move the drink fridge completely out of the way.",
+        "Use the water fountain key to open the side panels of the water fountain. Scroll the panel down and remove it.",
+        "Locate the two blue valves and twist them shut \u2014 they should be perpendicular to their line when closed. This shuts off the water flow.",
+        "Place your water bowl or bucket underneath the filter area.",
+        "Grab the old water filter, turn it to the LEFT, and pull it down. Water will begin spilling out into the bowl \u2014 this is normal.",
+        "Take the new water filter, push it up into place, and twist it to the RIGHT until it is secured.",
+        "Grab towels from the dirty towel bin and dry up all the water inside the machine.",
+        "Once everything is dry, close the side panel back up using the water fountain key.",
+        "Move the drink fridge back into position. Make sure all drinks are standing upright and looking great.",
+        "Return the water fountain key to the front desk key ring.",
+        "Throw away the old water filter in the trash.",
+        "Return all tools and the water bowl to where you got them."
+      ],
+      "source": "text",
+      "addedAt": "2026-08-06T00:00:00.000Z"
+    },
+    "sop_week_preview_recording_001": {
+      "title": "Recording & Publishing the Weekly Preview",
+      "category": "Coaching",
+      "summary": "How to record the weekly video preview, upload to YouTube, convert to a blog via Claude, and send as an email through Wodify scheduled for Sunday at 3:30 PM.",
+      "steps": [
+        "SETUP: Have an iPad or iPhone ready to record. On a second device or screen, have the upcoming week's workouts and the Announcements tab open so you can reference both during the recording.",
+        "HIT RECORD and open with: 'Howdy Vegvisir family!'",
+        "ANNOUNCEMENTS: Go over any upcoming events visible in the Announcements tab for the coming week.",
+        "WEEK PREVIEW: Go through each day Monday through Sunday. For each day, cover: the strength portion and give one point of performance to work on, then the MetCon and give one point of performance to work on. Speak directly to the athletes but think like a coach \u2014 share cues that fix common faults you have observed on the floor.",
+        "CLOSE: Remind them of any upcoming events again. Thank them for listening and tell them you will see them this week.",
+        "UPLOAD: Upload the video to the Vegvisir CrossFit YouTube channel. If you do not have access, ask Kidd.",
+        "TRANSCRIPT: Wait approximately one hour after uploading for YouTube to generate the transcript. Copy the full transcript.",
+        "BLOG CONVERSION: Go to the Claude for Business account. Open the chat called 'Blog Cleanup'. Paste the transcript in. Claude will convert it into a formatted blog post. Copy the blog output.",
+        "EMAIL IN WODIFY: Go to app.wodify.com. Go to Communication, then Mass Communication. Click New Email From Template. Select the Week Preview template (use the only one available unless new templates have been added \u2014 it will be called Week Preview).",
+        "Replace the body text with the blog Claude generated.",
+        "Update the bold header text to reflect the current cycle name and the week number.",
+        "Go back to the YouTube video, copy the link. Click on the YouTube preview rectangle in the email. A link field will appear \u2014 erase the old link and paste in the new one. Click somewhere else on the page and the preview should load.",
+        "Schedule the email to send on Sunday at 3:30 PM.",
+        "Your week preview is done and you are good to go."
+      ],
+      "source": "text",
+      "addedAt": "2026-08-06T00:00:00.000Z"
     }
   },
-  "lastUpdated": "2026-07-18T00:00:00.000Z",
+  "lastUpdated": "2026-08-06T00:00:00.000Z",
   "version": 3
 }
